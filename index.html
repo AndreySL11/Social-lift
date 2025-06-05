@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Social Lift Jump</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
+    body {
+      margin: 0; 
+      overflow: hidden;
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      font-family: 'Montserrat', sans-serif;
+      user-select: none;
+    }
+    #gameCanvas {
+      display: block;
+      margin: 0 auto;
+      background: #102a43;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(255,255,255,0.2);
+    }
+    #ui {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 320px;
+      display: flex;
+      justify-content: space-between;
+      color: #fff;
+      font-size: 20px;
+      font-weight: 600;
+      text-shadow: 0 0 5px #000;
+      pointer-events: none;
+      user-select: none;
+    }
+    #restartBtn {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #2a5298;
+      border: none;
+      padding: 15px 40px;
+      font-size: 24px;
+      color: #fff;
+      font-weight: 700;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 0 15px #1e3c72;
+      display: none;
+      user-select: none;
+      transition: background-color 0.3s ease;
+    }
+    #restartBtn:hover {
+      background-color: #1e3c72;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="320" height="480"></canvas>
+  <div id="ui">
+    <div>Высота: <span id="score">0</span> м</div>
+    <div>Монеты SL: <span id="coins">0</span></div>
+  </div>
+  <button id="restartBtn">Начать заново</button>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const width = canvas.width;
+      const height = canvas.height;
+
+      const scoreEl = document.getElementById('score');
+      const coinsEl = document.getElementById('coins');
+      const restartBtn = document.getElementById('restartBtn');
+
+      // --- Игрок ---
+      const player = {
+        x: width / 2,
+        y: height - 100,
+        width: 30,
+        height: 40,
+        vy: 0,
+        vx: 0,
+        gravity: 0.3,
+        jumpForce: -8,
+        color: '#FFD700',
+      };
+
+      // --- Платформы ---
+      class Platform {
+        constructor(x, y, w, h, type = 'static') {
+          this.x = x;
+          this.y = y;
+          this.width = w;
+          this.height = h;
+          this.type = type; // 'static' или 'moving'
+          this.moveDirection = 1; // 1 или -1
+          this.moveSpeed = 1.5;
+          this.moveRange = 60;
+          this.baseX = x;
+          this.baseY = y;
+          this.coin = Math.random() < 0.35; // На ~35% платформ есть монеты
+          this.coinCollected = false;
+        }
+
+        update() {
+          if (this.type === 'moving') {
+            this.x += this.moveSpeed * this.moveDirection;
+            if (this.x > this.baseX + this.moveRange || this.x < this.baseX - this.moveRange) {
+              this.moveDirection *= -1;
+            }
+          }
+        }
+
+        draw(ctx) {
+          ctx.fillStyle = '#4A90E2';
+          ctx.strokeStyle = '#2C70D3';
+          ctx.lineWidth = 2;
+          ctx.fillRect(this.x, this.y, this.width, this.height);
+          ctx.strokeRect(this.x, this.y, this.width, this.height);
+
+          if (this.coin && !this.coinCollected) {
+            const cx = this.x + this.width / 2;
+            const cy = this.y - 15;
+            const r = 10;
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#B8860B';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 10px Montserrat, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('SL', cx, cy);
+          }
+        }
+      }
+
+      // --- Игра ---
+      let platforms = [];
+      const maxPlatforms = 12;
+      const platformGap = 50; 
+      let scrollOffset = 0;
+      let gameOver = false;
+      let coinsCount = 0;
+
+      function createInitialPlatforms() {
+        platforms = [];
+
+        // Стартовая платформа: крупнее и фиксирована внизу центра
+        const startPlatform = new Platform(width/2 - 50, height - 30, 100, 15, 'static');
+        startPlatform.coin = false;
+        platforms.push(startPlatform);
+
+        let lastY = height - 100;
+
+        while (platforms.length < maxPlatforms) {
+          const countAtHeight = Math.random() < 0.6 ? 2 : 1;
+          for(let i=0; i<countAtHeight; i++) {
+            const w = 60;
+            const x = Math.random() * (width - w);
+            const y = lastY;
+
+            const type = Math.random() < 0.3 ? 'moving' : 'static';
+
+            let overlap = platforms.some(p => 
+              Math.abs(p.y - y) < 10 && Math.abs(p.x - x) < 60
+            );
+            if (!overlap) {
+              platforms.push(new Platform(x, y, w, 10, type));
+            }
+          }
+          lastY -= platformGap + Math.random()*15;
+        }
+      }
+
+      function drawPlayer() {
+        ctx.fillStyle = player.color;
+        ctx.beginPath();
+        ctx.fillRect(player.x, player.y, player.width, player.height);
+
+        ctx.fillStyle = '#333';
+        ctx.font = 'bold 14px Montserrat, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('SL', player.x + player.width/2, player.y + player.height/2);
+      }
+
+      let leftPressed = false;
+      let rightPressed = false;
+
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') leftPressed = true;
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') rightPressed = true;
+      });
+      window.addEventListener('keyup', (e) => {
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') leftPressed = false;
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') rightPressed = false;
+      });
+
+      function update() {
+        if (gameOver) return;
+
+        const speedX = 3;
+        if (leftPressed) player.vx = -speedX;
+        else if (rightPressed) player.vx = speedX;
+        else player.vx = 0;
+
+        player.x += player.vx;
+        if (player.x + player.width < 0) player.x = width;
+        else if (player.x > width) player.x = -player.width;
+
+        player.vy += player.gravity;
+        player.y += player.vy;
+
+        platforms.forEach(p => {
+          p.update();
+
+          if (
+            player.vy > 0 &&
+            player.x + player.width > p.x &&
+            player.x < p.x + p.width &&
+            player.y + player.height > p.y &&
+            player.y + player.height < p.y + p.height + player.vy &&
+            !gameOver
+          ) {
+            player.vy = player.jumpForce;
+
+            if (p.type === 'moving') {
+              player.x += p.moveSpeed * p.moveDirection;
+            }
+
+            if (p.coin && !p.coinCollected) {
+              p.coinCollected = true;
+              coinsCount++;
+              coinsEl.textContent = coinsCount;
+            }
+          }
+        });
+
+        if (player.y < height / 3) {
+          const diff = (height / 3) - player.y;
+          player.y = height / 3;
+
+          platforms.forEach(p => {
+            p.y += diff;
+          });
+
+          scrollOffset += diff;
+          scoreEl.textContent = Math.floor(scrollOffset);
+        }
+
+        platforms = platforms.filter(p => p.y < height + 20);
+
+        while (platforms.length < maxPlatforms) {
+          const lastPlatform = platforms[platforms.length - 1];
+          const w = 60;
+          const y = lastPlatform.y - platformGap - Math.random() * 15;
+          const x = Math.random() * (width - w);
+          const type = Math.random() < 0.3 ? 'moving' : 'static';
+
+          platforms.push(new Platform(x, y, w, 10, type));
+        }
+
+        if (player.y > height) {
+          gameOver = true;
+          restartBtn.style.display = 'block';
+        }
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, width, height);
+
+        // Фон и платформа стартовая (внизу)
+        platforms.forEach(p => p.draw(ctx));
+
+        drawPlayer();
+      }
+
+      function gameLoop() {
+        update();
+        draw();
+        if (!gameOver) requestAnimationFrame(gameLoop);
+      }
+
+      restartBtn.onclick = () => {
+        restartBtn.style.display = 'none';
+        gameOver = false;
+        coinsCount = 0;
+        scrollOffset = 0;
+        scoreEl.textContent = '0';
+        coinsEl.textContent = '0';
+        player.x = width / 2;
+        player.y = height - 100;
+        player.vy = 0;
+        createInitialPlatforms();
+        gameLoop();
+      };
+
+      createInitialPlatforms();
+      gameLoop();
+    })();
+  </script>
+</body>
+</html>
