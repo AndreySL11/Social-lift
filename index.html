@@ -193,27 +193,32 @@
         ctx.fillText('SL', player.x + player.width/2, player.y + player.height/2);
       }
 
-      let leftPressed = false;
-      let rightPressed = false;
+      // Управление движением игрока с тач-экранов и мыши
+      let moveDirection = 0; // -1 влево, 1 вправо, 0 - стоим
+      const speedX = 3;
 
-      window.addEventListener('keydown', (e) => {
-        if (e.code === 'ArrowLeft' || e.code === 'KeyA') leftPressed = true;
-        if (e.code === 'ArrowRight' || e.code === 'KeyD') rightPressed = true;
-      });
-      window.addEventListener('keyup', (e) => {
-        if (e.code === 'ArrowLeft' || e.code === 'KeyA') leftPressed = false;
-        if (e.code === 'ArrowRight' || e.code === 'KeyD') rightPressed = false;
-      });
+      function onInputStart(event) {
+        const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+        const screenWidth = window.innerWidth;
+        moveDirection = clientX < screenWidth / 2 ? -1 : 1;
+      }
+
+      function onInputEnd(event) {
+        moveDirection = 0;
+      }
+
+      window.addEventListener('touchstart', onInputStart);
+      window.addEventListener('touchend', onInputEnd);
+      window.addEventListener('mousedown', onInputStart);
+      window.addEventListener('mouseup', onInputEnd);
 
       function update() {
         if (gameOver) return;
 
-        const speedX = 3;
-        if (leftPressed) player.vx = -speedX;
-        else if (rightPressed) player.vx = speedX;
-        else player.vx = 0;
+        player.vx = moveDirection * speedX;
 
         player.x += player.vx;
+        // Горизонтальная телепортация
         if (player.x + player.width < 0) player.x = width;
         else if (player.x > width) player.x = -player.width;
 
@@ -278,9 +283,7 @@
       function draw() {
         ctx.clearRect(0, 0, width, height);
 
-        // Фон и платформа стартовая (внизу)
         platforms.forEach(p => p.draw(ctx));
-
         drawPlayer();
       }
 
