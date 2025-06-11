@@ -6,310 +6,218 @@
   <title>Social Lift Jump</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
+    *{user-select:none; margin:0; padding:0;}
     body {
-      margin: 0; 
-      overflow: hidden;
-      background: linear-gradient(135deg, #1e3c72, #2a5298);
-      font-family: 'Montserrat', sans-serif;
-      user-select: none;
+      overflow:hidden; background:black; font-family:'Montserrat',sans-serif;
     }
     #gameCanvas {
-      display: block;
-      margin: 0 auto;
-      background: #102a43;
-      border-radius: 10px;
-      box-shadow: 0 0 20px rgba(255,255,255,0.2);
+      background:#102a43;
+      display:block;
+      margin:20px auto;
+      border-radius:8px;
+      box-shadow:0 0 20px rgba(255,255,255,0.2);
     }
     #ui {
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 320px;
-      display: flex;
-      justify-content: space-between;
-      color: #fff;
-      font-size: 20px;
-      font-weight: 600;
-      text-shadow: 0 0 5px #000;
-      pointer-events: none;
-      user-select: none;
+      position:fixed; top:10px; left:50%; transform:translateX(-50%);
+      display:flex; justify-content:space-between;
+      width:360px; color:white; font-size:18px; font-weight:600;
     }
-    #restartBtn {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: #2a5298;
-      border: none;
-      padding: 15px 40px;
-      font-size: 24px;
-      color: #fff;
-      font-weight: 700;
-      border-radius: 12px;
-      cursor: pointer;
-      box-shadow: 0 0 15px #1e3c72;
-      display: none;
-      user-select: none;
-      transition: background-color 0.3s ease;
+    button, .modal button {
+      background:#00bcd4; border:none; color:white; padding:8px 16px;
+      border-radius:6px; cursor:pointer; margin:4px;
     }
-    #restartBtn:hover {
-      background-color: #1e3c72;
+    .modal {
+      position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+      background:black; border:2px solid #00bcd4; padding:20px;
+      display:none; color:white; max-width:90%; max-height:90%; overflow:auto;
+      border-radius:8px;
     }
+    .modal h2{margin-bottom:10px;}
+    .boost {position:absolute; font-size:20px; font-weight:bold;}
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas" width="320" height="480"></canvas>
+  <canvas id="gameCanvas" width="360" height="600"></canvas>
   <div id="ui">
-    <div>Высота: <span id="score">0</span> м</div>
-    <div>Монеты SL: <span id="coins">0</span></div>
+    <div>⛏️: <span id="score">0</span></div>
+    <div>⚡: <span id="coins">0</span></div>
+    <button id="leaderBtn">🏆</button>
+    <button id="shopBtn">🛒</button>
+    <button id="inviteBtn">👥</button>
   </div>
-  <button id="restartBtn">Начать заново</button>
+
+  <div id="leaderModal" class="modal">
+    <h2>Рейтинг лидеров</h2>
+    <div id="leaderList">Загрузка...</div>
+    <button onclick="closeModal('leaderModal')">Закрыть</button>
+  </div>
+
+  <div id="shopModal" class="modal">
+    <h2>Магазин</h2>
+    <div>Сделать персонажа белым — 50 ⚡ <button onclick="buyColor('#ffffff')">Купить</button></div>
+    <div>Сделать персонажа голубым — 50 ⚡ <button onclick="buyColor('#00e5ff')">Купить</button></div>
+    <button onclick="closeModal('shopModal')">Закрыть</button>
+  </div>
+
+  <canvas id="inviteCanvas" style="display:none;"></canvas>
 
   <script>
-    (() => {
-      const canvas = document.getElementById('gameCanvas');
-      const ctx = canvas.getContext('2d');
-      const width = canvas.width;
-      const height = canvas.height;
+    // Инициализация
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const W=canvas.width, H=canvas.height;
+    const scoreEl = document.getElementById('score');
+    const coinsEl = document.getElementById('coins');
 
-      const scoreEl = document.getElementById('score');
-      const coinsEl = document.getElementById('coins');
-      const restartBtn = document.getElementById('restartBtn');
+    let score = 0, coins = 0, bestScore = 0;
+    let scroll=0, gameOver=false;
+    let boosters = [];
 
-      // --- Игрок ---
-      const player = {
-        x: width / 2,
-        y: height - 100,
-        width: 30,
-        height: 40,
-        vy: 0,
-        vx: 0,
-        gravity: 0.3,
-        jumpForce: -8,
-        color: '#FFD700',
+    const player = {x:W/2,y:H-100,w:30,h:40,vx:0,vy:0,grav:0.3,jump:-8,
+                    color:'#FFD700', shield:false, double:false, magnet:false};
+
+    class Platform {
+      constructor(x,y,w,h,type='static'){
+        this.x=x; this.y=y; this.w=w; this.h=h; this.type=type;
+        this.mr=60; this.dir=1; this.speed=1;
+        this.boost = Math.random()<0.2 ? ['double','magnet','shield'][Math.floor(Math.random()*3)] : null;
+        this.collected=false;
+      }
+      update(){
+        if(this.type==='moving'){this.x+=this.speed*this.dir;
+          if(this.x<0||this.x+this.w>W) this.dir*=-1;}
+      }
+      draw(){
+        ctx.fillStyle='#00bcd4'; ctx.fillRect(this.x,this.y,this.w,this.h);
+        if(this.boost && !this.collected){
+          ctx.fillStyle='white';ctx.font='20px Montserrat';
+          ctx.fillText(this.boost[0].toUpperCase(), this.x+this.w/2,this.y-5);
+        }
+      }
+    }
+
+    let plats=[]; const maxPlat=12, gap=50;
+
+    function initPlatforms(){
+      plats=[new Platform(W/2-60,H-30,120,15)];
+      let y=H-100;
+      while(plats.length<maxPlat){
+        let c = Math.random()<0.6?2:1;
+        for(let i=0;i<c;i++){
+          let x=Math.random()*(W-60), type=Math.random()<0.3?'moving':'static';
+          if(!plats.some(p=>Math.abs(p.y-y)<10&&Math.abs(p.x-x)<60))
+            plats.push(new Platform(x,y,60,10,type));
+        }
+        y-=gap+Math.random()*15;
+      }
+    }
+
+    let moveDir=0;
+    addEventListener('touchstart',e=>{moveDir=e.touches[0].clientX<W/2?-1:1;});
+    addEventListener('touchend',e=>{moveDir=0;});
+    addEventListener('mousedown',e=>{moveDir=e.clientX<W/2?-1:1;});
+    addEventListener('mouseup',e=>{moveDir=0;});
+
+    document.getElementById('leaderBtn').onclick = async()=>{
+      openModal('leaderModal');
+      let res = await fetch('https://your-server.com/api/leaderboard');
+      let data = await res.json();
+      document.getElementById('leaderList').innerHTML = data.map(u=>`${u.username}: ${u.score}`).join('<br>');
+    };
+    document.getElementById('shopBtn').onclick=()=>openModal('shopModal');
+    document.getElementById('inviteBtn').onclick=()=>inviteFriend();
+
+    function buyColor(c){
+      if(coins<50)return alert('Не хватает монет');
+      coins-=50; player.color=c; coinsEl.textContent=coins;
+    }
+
+    function openModal(id){document.getElementById(id).style.display='block';}
+    function closeModal(id){document.getElementById(id).style.display='none';}
+
+    async function inviteFriend(){
+      // Получаем QR с сервера (требует реализации на вашем бэке)
+      let res = await fetch('https://your-server.com/api/invite_qr');
+      let blob = await res.blob(), img=new Image();
+      img.onload=()=>{const ic=document.getElementById('inviteCanvas');
+        ic.width=200; ic.height=200; ic.style.display='block';
+        ic.getContext('2d').drawImage(img,0,0);}
+      img.src=URL.createObjectURL(blob);
+    }
+
+    function sendScore(){
+      const data = {
+        username: window.Telegram.WebApp.initDataUnsafe.user.username||'anon',
+        score, coins
       };
+      fetch('https://your-server.com/api/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    }
 
-      // --- Платформы ---
-      class Platform {
-        constructor(x, y, w, h, type = 'static') {
-          this.x = x;
-          this.y = y;
-          this.width = w;
-          this.height = h;
-          this.type = type; // 'static' или 'moving'
-          this.moveDirection = 1; // 1 или -1
-          this.moveSpeed = 1.5;
-          this.moveRange = 60;
-          this.baseX = x;
-          this.baseY = y;
-          this.coin = Math.random() < 0.35; // На ~35% платформ есть монеты
-          this.coinCollected = false;
-        }
+    function update(){
+      if(gameOver) return;
+      player.vx=moveDir*3; player.x+=player.vx;
+      if(player.x+player.w<0)player.x=W;
+      if(player.x>W)player.x=-player.w;
+      player.vy+=player.grav; player.y+=player.vy;
 
-        update() {
-          if (this.type === 'moving') {
-            this.x += this.moveSpeed * this.moveDirection;
-            if (this.x > this.baseX + this.moveRange || this.x < this.baseX - this.moveRange) {
-              this.moveDirection *= -1;
+      plats.forEach(p=>{
+        p.update();
+        if(player.vy>0 && player.x+player.w>p.x && player.x<p.x+p.w
+          && player.y+player.h>p.y && player.y+player.h< p.y+p.h+player.vy){
+            player.vy=player.jump;
+            if(p.boost && !p.collected){
+              player[p.boost]=true;
+              p.collected=true;
+              boosters.push({type:p.boost, t:performance.now()});
             }
-          }
         }
+      });
 
-        draw(ctx) {
-          ctx.fillStyle = '#4A90E2';
-          ctx.strokeStyle = '#2C70D3';
-          ctx.lineWidth = 2;
-          ctx.fillRect(this.x, this.y, this.width, this.height);
-          ctx.strokeRect(this.x, this.y, this.width, this.height);
-
-          if (this.coin && !this.coinCollected) {
-            const cx = this.x + this.width / 2;
-            const cy = this.y - 15;
-            const r = 10;
-            ctx.fillStyle = '#FFD700';
-            ctx.beginPath();
-            ctx.arc(cx, cy, r, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#B8860B';
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-            ctx.fillStyle = '#333';
-            ctx.font = 'bold 10px Montserrat, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('SL', cx, cy);
-          }
-        }
+      if(player.y < H*0.3){
+        let d = H*0.3 - player.y; player.y = H*0.3;
+        scroll+=d; score=scroll|0; scoreEl.textContent=score;
+        plats.forEach(p=>p.y+=d);
       }
 
-      // --- Игра ---
-      let platforms = [];
-      const maxPlatforms = 12;
-      const platformGap = 50; 
-      let scrollOffset = 0;
-      let gameOver = false;
-      let coinsCount = 0;
-
-      function createInitialPlatforms() {
-        platforms = [];
-
-        // Стартовая платформа: крупнее и фиксирована внизу центра
-        const startPlatform = new Platform(width/2 - 50, height - 30, 100, 15, 'static');
-        startPlatform.coin = false;
-        platforms.push(startPlatform);
-
-        let lastY = height - 100;
-
-        while (platforms.length < maxPlatforms) {
-          const countAtHeight = Math.random() < 0.6 ? 2 : 1;
-          for(let i=0; i<countAtHeight; i++) {
-            const w = 60;
-            const x = Math.random() * (width - w);
-            const y = lastY;
-
-            const type = Math.random() < 0.3 ? 'moving' : 'static';
-
-            let overlap = platforms.some(p => 
-              Math.abs(p.y - y) < 10 && Math.abs(p.x - x) < 60
-            );
-            if (!overlap) {
-              platforms.push(new Platform(x, y, w, 10, type));
-            }
-          }
-          lastY -= platformGap + Math.random()*15;
-        }
+      plats = plats.filter(p=>p.y<H+20);
+      while(plats.length<maxPlat){
+        let lp=plats[plats.length-1];
+        let x=Math.random()*(W-60), type=Math.random()<0.3?'moving':'static';
+        let np=new Platform(x, lp.y-gap-Math.random()*15,60,10,type);
+        plats.push(np);
       }
 
-      function drawPlayer() {
-        ctx.fillStyle = player.color;
-        ctx.beginPath();
-        ctx.fillRect(player.x, player.y, player.width, player.height);
+      if(player.y>H){gameOver=true; restart.style.display='block'; sendScore();}
+    }
 
-        ctx.fillStyle = '#333';
-        ctx.font = 'bold 14px Montserrat, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('SL', player.x + player.width/2, player.y + player.height/2);
-      }
+    function draw(){
+      // фон день/ночь
+      let t = Math.min(score/1000,1);
+      let r=20+(135-20)*t, g=20+(206-20)*t, b=50+(235-50)*t;
+      ctx.fillStyle=`rgb(${r|0},${g|0},${b|0})`;
+      ctx.fillRect(0,0,W,H);
 
-      // Управление движением игрока с тач-экранов и мыши
-      let moveDirection = 0; // -1 влево, 1 вправо, 0 - стоим
-      const speedX = 3;
+      plats.forEach(p=>p.draw());
+      ctx.fillStyle=player.color;
+      ctx.fillRect(player.x,player.y,player.w,player.h);
+      ctx.fillStyle='white';
+      ctx.font='14px Montserrat'; ctx.textAlign='center'; ctx.fillText('SL', player.x+player.w/2,player.y+player.h/2);
+    }
 
-      function onInputStart(event) {
-        const clientX = event.touches ? event.touches[0].clientX : event.clientX;
-        const screenWidth = window.innerWidth;
-        moveDirection = clientX < screenWidth / 2 ? -1 : 1;
-      }
+    function loop(){
+      update(); draw();
+      if(!gameOver)requestAnimationFrame(loop);
+    }
 
-      function onInputEnd(event) {
-        moveDirection = 0;
-      }
+    const restart = document.getElementById('restartBtn');
+    restart.onclick=()=>{
+      scroll=0; score=0; coins=0;scoreEl.textContent='0';coinsEl.textContent='0';
+      player.x=W/2; player.y=H-100; player.vy=0;
+      gameOver=false; restart.style.display='none';
+      booster=[]; initPlatforms(); loop();
+    };
 
-      window.addEventListener('touchstart', onInputStart);
-      window.addEventListener('touchend', onInputEnd);
-      window.addEventListener('mousedown', onInputStart);
-      window.addEventListener('mouseup', onInputEnd);
-
-      function update() {
-        if (gameOver) return;
-
-        player.vx = moveDirection * speedX;
-
-        player.x += player.vx;
-        // Горизонтальная телепортация
-        if (player.x + player.width < 0) player.x = width;
-        else if (player.x > width) player.x = -player.width;
-
-        player.vy += player.gravity;
-        player.y += player.vy;
-
-        platforms.forEach(p => {
-          p.update();
-
-          if (
-            player.vy > 0 &&
-            player.x + player.width > p.x &&
-            player.x < p.x + p.width &&
-            player.y + player.height > p.y &&
-            player.y + player.height < p.y + p.height + player.vy &&
-            !gameOver
-          ) {
-            player.vy = player.jumpForce;
-
-            if (p.type === 'moving') {
-              player.x += p.moveSpeed * p.moveDirection;
-            }
-
-            if (p.coin && !p.coinCollected) {
-              p.coinCollected = true;
-              coinsCount++;
-              coinsEl.textContent = coinsCount;
-            }
-          }
-        });
-
-        if (player.y < height / 3) {
-          const diff = (height / 3) - player.y;
-          player.y = height / 3;
-
-          platforms.forEach(p => {
-            p.y += diff;
-          });
-
-          scrollOffset += diff;
-          scoreEl.textContent = Math.floor(scrollOffset);
-        }
-
-        platforms = platforms.filter(p => p.y < height + 20);
-
-        while (platforms.length < maxPlatforms) {
-          const lastPlatform = platforms[platforms.length - 1];
-          const w = 60;
-          const y = lastPlatform.y - platformGap - Math.random() * 15;
-          const x = Math.random() * (width - w);
-          const type = Math.random() < 0.3 ? 'moving' : 'static';
-
-          platforms.push(new Platform(x, y, w, 10, type));
-        }
-
-        if (player.y > height) {
-          gameOver = true;
-          restartBtn.style.display = 'block';
-        }
-      }
-
-      function draw() {
-        ctx.clearRect(0, 0, width, height);
-
-        platforms.forEach(p => p.draw(ctx));
-        drawPlayer();
-      }
-
-      function gameLoop() {
-        update();
-        draw();
-        if (!gameOver) requestAnimationFrame(gameLoop);
-      }
-
-      restartBtn.onclick = () => {
-        restartBtn.style.display = 'none';
-        gameOver = false;
-        coinsCount = 0;
-        scrollOffset = 0;
-        scoreEl.textContent = '0';
-        coinsEl.textContent = '0';
-        player.x = width / 2;
-        player.y = height - 100;
-        player.vy = 0;
-        createInitialPlatforms();
-        gameLoop();
-      };
-
-      createInitialPlatforms();
-      gameLoop();
-    })();
+    initPlatforms(); loop();
   </script>
 </body>
 </html>
