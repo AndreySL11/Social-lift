@@ -6,160 +6,220 @@
   <title>Social Lift Jump</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
-    body { margin:0; overflow:hidden; font-family:'Montserrat',sans-serif; background:#000; color:#fff; }
-    #splash {
-      position:absolute; top:0; left:0; width:100%; height:100%;
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      background:#000; z-index:10;
+    body {
+      margin: 0; overflow: hidden;
+      background: #000;
+      font-family: 'Montserrat', sans-serif;
+      color: #fff;
+      user-select: none;
     }
-    #splash h1 {
-      font-size:4em; text-shadow:2px 2px #00dfff; margin:0;
+    #overlay {
+      position: absolute; width:100%; height:100%;
+      background: linear-gradient(135deg, #0D1B2A, #1B263B);
+      display:flex; align-items:center; justify-content:center;
+      flex-direction:column;
+      z-index:2;
     }
-    #splash p { margin:10px; }
-    #splash button {
-      margin-top:20px; padding:10px 20px; font-size:1.2em;
-      background:#00dfff; color:#000; border:none; border-radius:8px;
-      cursor:pointer;
+    #overlay h1 {
+      font-size: 48px; margin-bottom: 20px;
+      color: #69B3FF;
+      text-shadow: 2px 2px #000;
     }
-    #gameCanvas { display:none; margin:auto; background:#000; border:2px solid #00dfff; }
+    #startBtn {
+      padding: 15px 30px;
+      font-size: 24px;
+      background: #69B3FF;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 0 10px #fff;
+    }
+    #startBtn:hover {
+      background: #5AA7DB;
+    }
+    #gameCanvas {
+      display: block;
+      margin: 0 auto;
+      background: #0D1B2A;
+    }
     #ui {
-      position:fixed; top:10px; left:10px;
-      display:flex; flex-wrap:wrap; gap:10px;
-      font-size:18px; color:#00dfff;
-      text-shadow:0 0 2px #000;
-      pointer-events:none;
+      position: absolute; top:10px; left:50%;
+      transform: translateX(-50%);
+      display:flex; gap:20px;
+      font-size:18px;
+      color:#69B3FF;
+      z-index:1;
     }
-    .btn { background:#00dfff; color:#000; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; pointer-events:auto; }
-    #rating { position:fixed; top:10px; right:10px; width:200px; background:rgba(0,0,0,0.5); padding:10px; border:1px solid #00dfff; border-radius:8px; max-height:80vh; overflow:auto; }
-    #rating h2 { margin:0 0 10px 0; font-size:18px; color:#fff; text-align:center; }
-    #rating ul { list-style:none; padding:0; margin:0; }
-    #rating li { margin-bottom:6px; }
-    #inviteBtn { position:fixed; bottom:10px; left:50%; transform:translateX(-50%); background:#00dfff; color:#000; padding:8px 16px; border:none; border-radius:8px; cursor:pointer; pointer-events:auto; }
+    #leaderboard {
+      position:absolute; bottom:20px; left:50%;
+      transform: translateX(-50%);
+      width:300px;
+      background: rgba(20,30,40,0.8);
+      padding:10px; border-radius:8px;
+      text-align:center;
+      font-size:16px;
+      z-index:1;
+    }
   </style>
 </head>
 <body>
-  <div id="splash">
-    <h1>Social Lift</h1>
-    <p id="splash-date">—</p>
+  <div id="overlay">
+    <h1>Social Lift</h1>
     <button id="startBtn">Начать игру</button>
   </div>
-
-  <canvas id="gameCanvas" width="320" height="480"></canvas>
+  <canvas id="gameCanvas" width="360" height="640"></canvas>
   <div id="ui">
     <div>Высота: <span id="score">0</span> м</div>
-    <div>Монеты: <span id="coins">0</span></div>
-    <button id="boostBtn" class="btn">Бустер x2</button>
-    <button id="statsBtn" class="btn">Статистика</button>
+    <div>Монеты SL: <span id="coins">0</span></div>
   </div>
-  <div id="rating">
-    <h2>Рейтинг</h2>
-    <ul id="ratingList"></ul>
+  <div id="leaderboard">
+    <strong>Топ-5 игроков</strong>
+    <ol id="boardList">
+      <li>—</li><li>—</li><li>—</li><li>—</li><li>—</li>
+    </ol>
   </div>
-  <button id="inviteBtn">Пригласить друга</button>
 
-<script>
-(() => {
-  // Получаем имя через Telegram WebApp API
-  const tg = window.Telegram.WebApp;
-  tg.expand();  
-  const playerName = tg.initDataUnsafe?.user?.first_name || 'Игрок';
+  <script>
+    (() => {
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      const overlay = document.getElementById('overlay');
+      const startBtn = document.getElementById('startBtn');
+      const scoreEl = document.getElementById('score');
+      const coinsEl = document.getElementById('coins');
+      const boardList = document.getElementById('boardList');
 
-  // Splash: дата и кнопка
-  document.getElementById('splash-date').textContent = new Date().toLocaleString();
-  document.getElementById('startBtn').addEventListener('click', startGame);
+      // Игровые сущности
+      let player, platforms, scroll, coins, gameOver;
+      const maxP = 12, gap = 50;
 
-  // Основные элементы и переменные
-  const canvas = document.getElementById('gameCanvas');
-  const ctx = canvas.getContext('2d');
-  const width = canvas.width, height = canvas.height;
-  const scoreEl = document.getElementById('score');
-  const coinsEl = document.getElementById('coins');
-  const ratingList = document.getElementById('ratingList');
-  const boostBtn = document.getElementById('boostBtn');
-  const statsBtn = document.getElementById('statsBtn');
-  const inviteBtn = document.getElementById('inviteBtn');
+      class PF {
+        constructor(x,y,wid,type='static'){
+          this.x=x; this.y=y; this.w=wid; this.h=12;
+          this.type=type; this.baseX=x; this.dir=1;
+          this.coin = Math.random()<0.35; this.coined=false;
+        }
+        upd(){
+          if(this.type==='moving'){
+            this.x += this.dir*1.2;
+            if(this.x > this.baseX+40 || this.x<this.baseX-40) this.dir*=-1;
+          }
+        }
+        draw(){
+          ctx.fillStyle='#69B3FF'; ctx.fillRect(this.x,this.y,this.w,this.h);
+          ctx.strokeStyle='#fff'; ctx.strokeRect(this.x,this.y,this.w,this.h);
+          if(this.coin && !this.coined){
+            const cx=this.x+this.w/2, cy=this.y-10;
+            ctx.fillStyle='#FFD700'; ctx.beginPath();
+            ctx.arc(cx,cy,8,0,2*Math.PI); ctx.fill();
+            ctx.fillStyle='#000'; ctx.font='10px Montserrat'; ctx.fillText('SL',cx,cy+1);
+          }
+        }
+      }
 
-  let score = 0, coins = 0, gameOver = false, boostActive = false, boostTimer = 0;
-  let platforms = [], scrollOffset = 0;
+      function initGame(){
+        player = { x: w/2-15, y: h-120, w:30, h:40, vy:0 };
+        scroll=0; coins=0; gameOver=false;
+        platforms = [];
+        platforms.push(new PF(w/2-50,h-30,100,'static'));
+        let y=h-100;
+        while(platforms.length<maxP){
+          const cnt=(Math.random()<.6?2:1);
+          for(let i=0;i<cnt;i++){
+            const pl=new PF(Math.random()*(w-60),y,60,Math.random()<.3?'moving':'static');
+            if(!platforms.some(o=>Math.abs(o.y-y)<10 && Math.abs(o.x-pl.x)<60)) platforms.push(pl);
+          }
+          y-=gap+Math.random()*20;
+        }
+        scoreEl.textContent='0'; coinsEl.textContent='0';
+      }
 
-  class Platform { /* копируем реализацию из вашего кода */ }
-  // ... Platform конструктор, update, draw как ранее
+      function update(){
+        if(gameOver) return;
+        player.vy += 0.35;
+        player.y += player.vy;
+        platforms.forEach(p => {
+          p.upd();
+          if(player.vy>0
+            && player.x+player.w>p.x
+            && player.x<p.x+p.w
+            && player.y+player.h > p.y
+            && player.y+player.h < p.y+p.h+player.vy
+          ){
+            player.vy = -8;
+            if(p.coin && !p.coined){
+              p.coined=true;
+              coins++; coinsEl.textContent=coins;
+            }
+            if(p.type==='moving') player.x += p.dir*1.2;
+          }
+        });
+        if(player.y < h/3){
+          const dy = h/3 - player.y;
+          player.y = h/3;
+          platforms.forEach(p=>p.y+=dy);
+          scroll += dy;
+          scoreEl.textContent = Math.floor(scroll);
+        }
+        platforms = platforms.filter(p=>p.y<h+20);
+        while(platforms.length<maxP){
+          const lp=platforms[platforms.length-1];
+          const newP=new PF(Math.random()*(w-60),lp.y-gap-Math.random()*20,60,Math.random()<.3?'moving':'static');
+          platforms.push(newP);
+        }
+        if(player.y > h){ gameOver=true; onGameEnd(); }
+      }
 
-  function createPlatforms() { /* копируется */ }
-  function drawPlayer() { /* копируется */ }
+      function draw(){
+        ctx.clearRect(0,0,w,h);
+        platforms.forEach(p=>p.draw());
+        ctx.fillStyle='#FFD700';
+        ctx.fillRect(player.x,player.y,player.w,player.h);
+        ctx.fillStyle='#000';
+        ctx.font='bold 14px Montserrat';
+        ctx.fillText('SL',player.x+player.w/2-10,player.y+player.h/2+3);
+      }
 
-  // Игровые функции (update, draw, loop) — берём из вашего кода, вписываем сюда
+      function loop(){ update(); draw(); if(!gameOver) requestAnimationFrame(loop); }
 
-  function startGame() {
-    document.getElementById('splash').style.display = 'none';
-    canvas.style.display = 'block';
-    resetGame();
-    loop();
-  }
+      function onGameEnd(){
+        const nick = window.Telegram?.WebApp?.initDataUnsafe?.user?.username || 'Player';
+        const score = Math.floor(scroll);
+        const rec = JSON.parse(localStorage.getItem('slboard')||'[]');
+        rec.push({nick,score}); rec.sort((a,b)=>b.score-a.score);
+        localStorage.setItem('slboard', JSON.stringify(rec.slice(0,5)));
+        showBoard();
+      }
 
-  // Рейтинг хранится в localStorage
-  function loadRating() {
-    return JSON.parse(localStorage.getItem('sl_rating')||'[]');
-  }
-  function saveRating(data) {
-    localStorage.setItem('sl_rating', JSON.stringify(data));
-  }
-  function updateRating() {
-    const data = loadRating();
-    const idx = data.findIndex(o => o.name === playerName);
-    if (idx < 0) data.push({name:playerName, score});
-    else if (score > data[idx].score) data[idx].score = score;
-    data.sort((a,b)=>b.score-a.score);
-    saveRating(data.slice(0,10));
-    ratingList.innerHTML = '';
-    loadRating().forEach((o,i)=>ratingList.innerHTML += `<li>${i+1}. ${o.name}: ${o.score} м</li>`);
-  }
+      function showBoard(){
+        const rec = JSON.parse(localStorage.getItem('slboard')||'[]');
+        boardList.innerHTML = rec.slice(0,5).map(e=>`<li>${e.nick}: ${e.score} м</li>`).join('');
+      }
 
-  // Буфер функций: boost, stats, invite
-  boostBtn.addEventListener('click', () => {
-    boostActive = true;
-    boostTimer = 10000;
-    boostBtn.disabled = true;
-    setTimeout(()=>{
-      boostActive=false;
-      boostBtn.disabled = false;
-    }, boostTimer);
-  });
+      startBtn.onclick = ()=>{
+        overlay.style.display='none';
+        initGame(); showBoard(); loop();
+      };
 
-  statsBtn.addEventListener('click', () => {
-    alert(`Игрок: ${playerName}\nВысота: ${score} м\nМонеты: ${coins}`);
-  });
+      // Поддержка касаний и кликов
+      let dir = 0;
+      window.addEventListener('mousedown', e => {dir = (e.clientX < w/2 ? -1:1);});
+      window.addEventListener('mouseup', ()=> dir=0);
+      window.addEventListener('touchstart', e=>dir = (e.touches[0].clientX < w/2 ? -1:1));
+      window.addEventListener('touchend', ()=>dir=0);
 
-  inviteBtn.addEventListener('click', () => {
-    tg.shareData ? tg.shareData() : alert('Нажмите кнопку «Поделиться» 😊');
-  });
+      // Движение игрока
+      setInterval(()=>{
+        if(!gameOver) player.x += dir*3;
+        if(player.x+player.w<0) player.x=w;
+        if(player.x>w) player.x=-player.w;
+      },16);
 
-  function gameOverHandler() {
-    updateRating();
-    statsBtn.click();
-  }
-
-  function resetGame() {
-    score = coins = scrollOffset = 0;
-    gameOver = false;
-    boostActive = false;
-    document.getElementById('score').textContent = '0';
-    document.getElementById('coins').textContent = '0';
-    createPlatforms();
-  }
-
-  function loop() {
-    if (gameOver) {
-      gameOverHandler();
-      return;
-    }
-    // update()/draw() из вашего кода, с учётом boostActive (например, умножаем скорость и платформы)
-    requestAnimationFrame(loop);
-  }
-
-  // Инициализируем рейтинг на старте
-  updateRating();
-})();
-</script>
+      // При загрузке
+      showBoard();
+    })();
+  </script>
 </body>
 </html>
