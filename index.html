@@ -2,509 +2,643 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Social Lift Jump - обновленная версия</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Social Lift Jump</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
-    body, html {
-      margin: 0; padding: 0; overflow: hidden;
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
       font-family: 'Montserrat', sans-serif;
-      background: #1E2A47;
-      color: #fff;
       user-select: none;
-      -webkit-tap-highlight-color: transparent;
+      color: #fff;
     }
-    #gameCanvas {
+    canvas {
       display: block;
-      background: linear-gradient(to top, #2c3e50 0%, #3498db 100%);
       margin: 0 auto;
-      border: 2px solid #2980b9;
-      box-shadow: 0 0 15px #2980b9aa;
+      background: #102a43;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(255,255,255,0.2);
     }
-    .overlay {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      background: rgba(30, 42, 71, 0.9);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 10;
-      color: #fff;
-    }
-    button {
-      background: #3498db;
-      border: none;
-      border-radius: 6px;
-      padding: 12px 25px;
-      margin: 8px;
-      font-weight: 700;
-      color: #fff;
-      cursor: pointer;
-      box-shadow: 0 3px 8px #2980b9;
-      transition: background 0.3s;
-      min-width: 160px;
-    }
-    button:hover {
-      background: #2980b9;
-    }
-    .shopItem {
-      padding: 10px;
-      margin: 6px 0;
-      border-radius: 6px;
-      cursor: pointer;
-      user-select: none;
-      box-shadow: 0 2px 6px #00000055;
-    }
-    .shopItem.selected {
-      border: 2px solid #FFD700;
-      box-shadow: 0 0 15px #FFD700;
-    }
-    .shopList {
-      max-height: 200px;
-      overflow-y: auto;
-      width: 300px;
-      margin: 10px 0;
-      background: #27436e;
-      padding: 10px;
-      border-radius: 8px;
-      box-shadow: inset 0 0 8px #00000055;
-    }
-    #uiTop {
-      position: absolute;
-      top: 8px;
+    #ui {
+      position: fixed;
+      top: 20px;
       left: 50%;
       transform: translateX(-50%);
-      font-size: 20px;
-      font-weight: 700;
-      text-shadow: 0 0 8px #00000088;
-      user-select: none;
-      z-index: 5;
-    }
-    #coinsEl {
-      margin-left: 20px;
-      color: #FFD700;
-    }
-    #buttonsMenu {
+      width: 320px;
       display: flex;
-      flex-direction: column;
-      align-items: center;
+      justify-content: space-between;
+      font-size: 20px;
+      font-weight: 600;
+      text-shadow: 0 0 5px #000;
+      pointer-events: none;
     }
-    .hidden {
-      display: none !important;
+    button {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      padding: 12px 24px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 0 15px #1e3c72;
+      background-color: #2a5298;
+      color: white;
+      margin: 5px;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    button:hover {
+      background-color: #1e3c72;
+    }
+    /* Меню и экраны */
+    #menu, #gameOverScreen, #shopScreen, #ratingScreen {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 320px;
+      padding: 20px;
+      border-radius: 16px;
+      background: rgba(16, 42, 67, 0.95);
+      box-shadow: 0 0 30px #0f2241;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      display: none;
+      color: #fff;
+      z-index: 10;
+      user-select: none;
+    }
+    #menu.active, #gameOverScreen.active, #shopScreen.active, #ratingScreen.active {
+      display: block;
+    }
+    h2 {
+      margin-bottom: 15px;
+      font-weight: 700;
+    }
+    .shop-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 8px 0;
+      border-bottom: 1px solid #3a5aad;
+      padding-bottom: 8px;
+    }
+    .shop-item button {
+      padding: 6px 12px;
+      font-size: 16px;
+      box-shadow: none;
+      border-radius: 8px;
+    }
+    .skin-color {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      margin-right: 10px;
+      vertical-align: middle;
+      border: 1px solid #fff;
+    }
+    #ratingList {
+      max-height: 200px;
+      overflow-y: auto;
+      text-align: left;
+      margin-top: 10px;
+      font-size: 16px;
     }
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas" width="400" height="600"></canvas>
-  <div id="uiTop">Высота: <span id="scoreEl">0</span> м <span id="coinsEl">💰 0</span></div>
+  <canvas id="gameCanvas" width="320" height="480"></canvas>
 
-  <!-- Меню Заставки -->
-  <div id="startScreen" class="overlay">
-    <h1>Social Lift Jump</h1>
-    <button id="startGameBtn">Начать игру</button>
+  <div id="ui">
+    <div>Высота: <span id="score">0</span> м</div>
+    <div>Монеты SL: <span id="coins">0</span></div>
   </div>
 
-  <!-- Меню после смерти -->
-  <div id="gameOverMenu" class="overlay hidden">
-    <h2>Игра окончена!</h2>
+  <!-- Главное меню -->
+  <div id="menu" class="active">
+    <h2>Social Lift Jump</h2>
+    <button id="startGameBtn">Начать игру</button>
+    <button id="openShopBtn">Магазин</button>
+    <button id="openRatingBtn">Рейтинг</button>
+  </div>
+
+  <!-- Экран проигрыша -->
+  <div id="gameOverScreen">
+    <h2>Игра окончена</h2>
     <p>Ваш результат: <span id="finalScore">0</span> м</p>
-    <div id="buttonsMenu">
-      <button id="restartBtn">Начать заново</button>
-      <button id="openShopBtn">Магазин</button>
-      <button id="openRatingBtn">Рейтинг</button>
-    </div>
+    <p>Монеты: <span id="finalCoins">0</span></p>
+    <button id="restartGameBtn">Начать заново</button>
+    <button id="goToMenuBtn1">В меню</button>
   </div>
 
   <!-- Магазин -->
-  <div id="shopPanel" class="overlay hidden" style="max-width: 350px;">
+  <div id="shopScreen">
     <h2>Магазин</h2>
+    <div>
+      <strong>Монеты: <span id="shopCoins">0</span></strong>
+    </div>
     <h3>Скины</h3>
-    <div id="skinsList" class="shopList"></div>
+    <div id="skinsList">
+      <!-- Скины динамически -->
+    </div>
     <h3>Усилители</h3>
-    <div id="boostersList" class="shopList"></div>
-    <button id="closeShopBtn" style="margin-top: 20px;">Назад</button>
+    <div id="boostersList">
+      <!-- Усилители динамически -->
+    </div>
+    <button id="closeShopBtn">Назад</button>
   </div>
 
   <!-- Рейтинг -->
-  <div id="ratingPanel" class="overlay hidden" style="max-width: 350px;">
+  <div id="ratingScreen">
     <h2>Рейтинг игроков</h2>
-    <div id="ratingList" class="shopList" style="color:#ffd700; font-weight:700;"></div>
-    <button id="closeRatingBtn" style="margin-top: 20px;">Назад</button>
+    <div id="ratingList">Загрузка...</div>
+    <button id="closeRatingBtn">Назад</button>
   </div>
 
-<script>
-(() => {
-  const canvas = document.getElementById('gameCanvas');
-  const ctx = canvas.getContext('2d');
-  const width = canvas.width;
-  const height = canvas.height;
+  <script>
+    (() => {
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const width = canvas.width;
+      const height = canvas.height;
 
-  const scoreEl = document.getElementById('scoreEl');
-  const coinsEl = document.getElementById('coinsEl');
+      const scoreEl = document.getElementById('score');
+      const coinsEl = document.getElementById('coins');
 
-  const startScreen = document.getElementById('startScreen');
-  const gameOverMenu = document.getElementById('gameOverMenu');
-  const finalScoreEl = document.getElementById('finalScore');
-  const restartBtn = document.getElementById('restartBtn');
-  const openShopBtn = document.getElementById('openShopBtn');
-  const openRatingBtn = document.getElementById('openRatingBtn');
+      // Экраны и кнопки
+      const menu = document.getElementById('menu');
+      const startGameBtn = document.getElementById('startGameBtn');
+      const openShopBtn = document.getElementById('openShopBtn');
+      const openRatingBtn = document.getElementById('openRatingBtn');
 
-  const shopPanel = document.getElementById('shopPanel');
-  const skinsList = document.getElementById('skinsList');
-  const boostersList = document.getElementById('boostersList');
-  const closeShopBtn = document.getElementById('closeShopBtn');
+      const gameOverScreen = document.getElementById('gameOverScreen');
+      const finalScoreEl = document.getElementById('finalScore');
+      const finalCoinsEl = document.getElementById('finalCoins');
+      const restartGameBtn = document.getElementById('restartGameBtn');
+      const goToMenuBtn1 = document.getElementById('goToMenuBtn1');
 
-  const ratingPanel = document.getElementById('ratingPanel');
-  const ratingList = document.getElementById('ratingList');
-  const closeRatingBtn = document.getElementById('closeRatingBtn');
+      const shopScreen = document.getElementById('shopScreen');
+      const skinsList = document.getElementById('skinsList');
+      const boostersList = document.getElementById('boostersList');
+      const shopCoinsEl = document.getElementById('shopCoins');
+      const closeShopBtn = document.getElementById('closeShopBtn');
 
-  const startGameBtn = document.getElementById('startGameBtn');
+      const ratingScreen = document.getElementById('ratingScreen');
+      const ratingList = document.getElementById('ratingList');
+      const closeRatingBtn = document.getElementById('closeRatingBtn');
 
-  // --- Игрок ---
-  const player = {
-    width: 30,
-    height: 40,
-    x: width/2 - 15,
-    y: height - 140,
-    vx: 0,
-    vy: 0,
-    baseJumpForce: -12,
-    jumpForce: -12,
-    baseSpeedX: 3,
-    speedX: 3,
-    gravity: 0.6,
-    color: '#FFD700'
-  };
+      // --- Игрок ---
+      let player = {
+        x: width / 2,
+        y: height - 140,
+        width: 30,
+        height: 40,
+        vy: 0,
+        vx: 0,
+        gravity: 0.3,
+        jumpForce: -8,
+        color: '#FFD700',
+        skinIndex: 0,
+        jumpBoost: 0,
+        coinBoost: 0,
+      };
 
-  let moveDirection = 0; // -1 влево, 1 вправо
+      // Данные магазина
+      const skins = [
+        { id: 0, name: 'Желтый', color: '#FFD700', price: 0 },
+        { id: 1, name: 'Голубой', color: '#00BFFF', price: 50 },
+        { id: 2, name: 'Красный', color: '#FF4500', price: 100 },
+        { id: 3, name: 'Зеленый', color: '#32CD32', price: 100 },
+      ];
 
-  // --- Платформы ---
-  class Platform {
-    constructor(x, y, width, height, type='static') {
-      this.x = x;
-      this.y = y;
-      this.width = width;
-      this.height = height;
-      this.type = type; // 'static' или 'moving'
-      this.vx = (type === 'moving') ? 1.5 : 0;
-      this.direction = 1;
-      this.coin = Math.random() < 0.3;
-      this.coinCollected = false;
-    }
-    update() {
-      if (this.type === 'moving') {
-        this.x += this.vx * this.direction;
-        if (this.x < 0 || this.x + this.width > width) {
-          this.direction *= -1;
+      const boosters = [
+        { id: 'jump', name: 'Прыжок +2', price: 150, description: 'Увеличивает силу прыжка на 2' },
+        { id: 'coin', name: 'Монеты x2', price: 200, description: 'Удваивает сбор монет' },
+      ];
+
+      // Игровые переменные
+      let platforms = [];
+      const maxPlatforms = 12;
+      const platformGap = 50;
+      let scrollOffset = 0;
+      let gameOver = false;
+      let coinsCount = 0;
+      let moveDirection = 0; // -1 влево, 1 вправо, 0 - нет движения
+      const speedX = 3;
+
+      // Монеты игрока (хранятся в localStorage)
+      let playerCoins = parseInt(localStorage.getItem('playerCoins')) || 0;
+      let ownedSkins = JSON.parse(localStorage.getItem('ownedSkins')) || [0];
+      let selectedSkin = parseInt(localStorage.getItem('selectedSkin')) || 0;
+      let playerBoosts = JSON.parse(localStorage.getItem('playerBoosts')) || {jump: 0, coin: 0};
+
+      // Рейтинг (симулируем)
+      let ratingData = [
+        { name: 'Анна', score: 1200 },
+        { name: 'Вася', score: 1100 },
+        { name: 'Елена', score: 950 },
+        { name: 'Ты', score: 0 }, // твой ник и очки будут тут после игры
+      ];
+
+      // --- Класс платформы ---
+      class Platform {
+        constructor(x, y, w, h, type = 'static') {
+          this.x = x;
+          this.y = y;
+          this.width = w;
+          this.height = h;
+          this.type = type; // 'static' или 'moving'
+          this.moveDirection = 1; // 1 или -1
+          this.moveSpeed = 1.5;
+          this.moveRange = 60;
+          this.baseX = x;
+          this.baseY = y;
+          this.coin = Math.random() < 0.35;
+          this.coinCollected = false;
+        }
+
+        update() {
+          if (this.type === 'moving') {
+            this.x += this.moveSpeed * this.moveDirection;
+            if (this.x > this.baseX + this.moveRange || this.x < this.baseX - this.moveRange) {
+              this.moveDirection *= -1;
+            }
+          }
+        }
+
+        draw(ctx) {
+          ctx.fillStyle = '#4A90E2';
+          ctx.strokeStyle = '#2C70D3';
+          ctx.lineWidth = 2;
+          ctx.fillRect(this.x, this.y, this.width, this.height);
+          ctx.strokeRect(this.x, this.y, this.width, this.height);
+
+          if (this.coin && !this.coinCollected) {
+            const cx = this.x + this.width / 2;
+            const cy = this.y - 15;
+            const r = 10;
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#B8860B';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 10px Montserrat, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('SL', cx, cy);
+          }
         }
       }
-    }
-    draw(ctx) {
-      ctx.fillStyle = (this.type === 'moving') ? '#2980b9' : '#34495e';
-      ctx.fillRect(this.x, this.y, this.width, this.height);
-      if (this.coin && !this.coinCollected) {
-        ctx.fillStyle = '#FFD700';
-        ctx.beginPath();
-        ctx.arc(this.x + this.width/2, this.y - 8, 6, 0, Math.PI * 2);
-        ctx.fill();
+
+      // --- Инициализация платформ ---
+      function createInitialPlatforms() {
+        platforms = [];
+        // Стартовая платформа внизу
+        platforms.push(new Platform(width / 2 - 50, height - 100, 100, 15, 'static'));
+        // Верхние платформы
+        let y = height - 150;
+        while (y > -5000) {
+          let x = Math.random() * (width - 80);
+          let w = 80;
+          let type = Math.random() < 0.25 ? 'moving' : 'static';
+          platforms.push(new Platform(x, y, w, 15, type));
+          y -= platformGap + Math.random() * 20;
+        }
       }
-    }
-  }
 
-  let platforms = [];
-  const maxPlatforms = 10;
-  const platformGap = 80;
+      // --- Отрисовка игрока ---
+      function drawPlayer() {
+        ctx.fillStyle = player.color;
+        ctx.fillRect(player.x, player.y, player.width, player.height);
+        // Можно добавить глаза или детали для скина
+      }
 
-  // --- Создание стартовой платформы ---
-  function createStartPlatform() {
-    // фиксированная платформа внизу посередине
-    const sp = new Platform(width/2 - 40, height - 100, 80, 14, 'static');
-    return sp;
-  }
+      // --- Обработка прыжка ---
+      function playerJump() {
+        player.vy = player.jumpForce - player.jumpBoost;
+      }
 
-  // --- Создание остальных платформ ---
-  function createInitialPlatforms() {
-    platforms = [];
-    platforms.push(createStartPlatform());
+      // --- Обновление игрока ---
+      function updatePlayer() {
+        player.vy += player.gravity;
+        player.y += player.vy;
 
-    let baseY = height - 100 - platformGap;
-    for (let i = 1; i < maxPlatforms; i++) {
-      const x = Math.random() * (width - 70);
-      const y = baseY - (i-1) * platformGap;
-      const type = (i > 3 && Math.random() < 0.4) ? 'moving' : 'static';
-      platforms.push(new Platform(x, y, 70, 12, type));
-    }
-  }
+        player.x += player.vx;
 
-  // --- Рейтинг ---
-  // Можно подключить к Telegram API, пока локально:
-  let playersRating = [
-    { name: 'User1', score: 230 },
-    { name: 'User2', score: 180 },
-    { name: 'User3', score: 140 },
-  ];
+        // Горизонтальный выход за край экрана (циркуляция)
+        if (player.x + player.width < 0) player.x = width;
+        else if (player.x > width) player.x = -player.width;
 
-  function updateRating(currentScore) {
-    const username = window.Telegram?.WebApp?.initDataUnsafe?.user?.username || 'Player';
-    let found = playersRating.find(p => p.name === username);
-    if (!found) {
-      playersRating.push({ name: username, score: currentScore });
-    } else {
-      if (currentScore > found.score) found.score = currentScore;
-    }
-    playersRating.sort((a,b) => b.score - a.score);
-    if (playersRating.length > 10) playersRating.length = 10;
-  }
+        // Проверка приземления на платформы
+        for (let plat of platforms) {
+          if (
+            player.vy > 0 && // падает вниз
+            player.x + player.width > plat.x &&
+            player.x < plat.x + plat.width &&
+            player.y + player.height > plat.y &&
+            player.y + player.height < plat.y + plat.height
+          ) {
+            player.y = plat.y - player.height;
+            playerJump();
+            if (plat.coin && !plat.coinCollected) {
+              plat.coinCollected = true;
+              coinsCount += player.coinBoost > 0 ? 2 : 1;
+              playerCoins += player.coinBoost > 0 ? 2 : 1;
+              saveCoins();
+              updateCoinsUI();
+            }
+            break;
+          }
+        }
 
-  function showRatingPanel() {
-    ratingList.innerHTML = playersRating.map(p => `${p.name}: ${p.score} м`).join('<br>');
-    ratingPanel.classList.remove('hidden');
-  }
+        // Игра заканчивается, если упал вниз за экран
+        if (player.y > height) {
+          gameOver = true;
+          endGame();
+        }
+      }
 
-  // --- Скины ---
-  const skins = [
-    { name: 'Золотой', color: '#FFD700' },
-    { name: 'Голубой', color: '#4A90E2' },
-    { name: 'Зеленый', color: '#2ECC71' },
-    { name: 'Красный', color: '#E74C3C' },
-    { name: 'Фиолетовый', color: '#9B59B6' },
-  ];
+      // --- Обновление платформ ---
+      function updatePlatforms() {
+        for (let plat of platforms) {
+          plat.update();
+        }
+      }
 
-  // --- Усилители ---
-  const boosters = [
-    { name: 'Сила прыжка +2', type: 'jump', value: -2, description: 'Прыжок выше' },
-    { name: 'Скорость +1', type: 'speed', value: 1, description: 'Быстрее движение' },
-  ];
+      // --- Отрисовка платформ ---
+      function drawPlatforms() {
+        for (let plat of platforms) {
+          plat.draw(ctx);
+        }
+      }
 
-  // Текущий выбранный скин и усилители
-  let selectedSkinIndex = 0;
-  let selectedBoosters = { jump: 0, speed: 0 };
+      // --- Основной игровой цикл ---
+      function gameLoop() {
+        if (gameOver) return;
 
-  function initShop() {
-    skinsList.innerHTML = '';
-    skins.forEach((skin, i) => {
-      const div = document.createElement('div');
-      div.className = 'shopItem' + (i === selectedSkinIndex ? ' selected' : '');
-      div.textContent = skin.name;
-      div.style.backgroundColor = skin.color;
-      div.style.color = i === 0 ? '#000' : '#fff';
-      div.title = skin.name;
-      div.addEventListener('click', () => {
-        selectedSkinIndex = i;
-        player.color = skins[i].color;
-        updateShopUI();
+        ctx.clearRect(0, 0, width, height);
+
+        updatePlayer();
+        updatePlatforms();
+
+        // Скролл камеры вверх, если игрок выше середины экрана
+        if (player.y < height / 2) {
+          let diff = (height / 2) - player.y;
+          player.y += diff;
+          platforms.forEach(p => p.y += diff);
+          scrollOffset += diff;
+          coinsCount = Math.max(0, Math.floor(scrollOffset / 10));
+          scoreEl.textContent = coinsCount;
+        }
+
+        drawPlatforms();
+        drawPlayer();
+
+        // Обработка движения
+        player.vx = moveDirection * speedX;
+
+        requestAnimationFrame(gameLoop);
+      }
+
+      // --- Обновление UI с монетами ---
+      function updateCoinsUI() {
+        coinsEl.textContent = playerCoins;
+        shopCoinsEl.textContent = playerCoins;
+      }
+
+      // --- Сохранение монет ---
+      function saveCoins() {
+        localStorage.setItem('playerCoins', playerCoins);
+      }
+
+      // --- Начать игру ---
+      function startGame() {
+        gameOver = false;
+        scrollOffset = 0;
+        coinsCount = 0;
+        player.x = width / 2;
+        player.y = height - 140;
+        player.vx = 0;
+        player.vy = 0;
+        player.jumpBoost = playerBoosts.jump || 0;
+        player.coinBoost = playerBoosts.coin || 0;
+        player.skinIndex = selectedSkin;
+        player.color = skins.find(s => s.id === player.skinIndex)?.color || '#FFD700';
+        createInitialPlatforms();
+        updateCoinsUI();
+        scoreEl.textContent = '0';
+        coinsEl.textContent = playerCoins;
+
+        menu.classList.remove('active');
+        gameOverScreen.classList.remove('active');
+        shopScreen.classList.remove('active');
+        ratingScreen.classList.remove('active');
+
+        requestAnimationFrame(gameLoop);
+      }
+
+      // --- Конец игры ---
+      function endGame() {
+        finalScoreEl.textContent = coinsCount;
+        finalCoinsEl.textContent = coinsCount;
+        menu.classList.remove('active');
+        gameOverScreen.classList.add('active');
+        shopScreen.classList.remove('active');
+        ratingScreen.classList.remove('active');
+
+        // Добавим результат в рейтинг
+        ratingData.push({ name: 'Ты', score: coinsCount });
+        ratingData.sort((a, b) => b.score - a.score);
+        if (ratingData.length > 10) ratingData.pop();
+
+        updateRatingList();
+      }
+
+      // --- Обработка нажатий клавиш ---
+      window.addEventListener('keydown', e => {
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+          moveDirection = -1;
+        } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+          moveDirection = 1;
+        }
       });
-      skinsList.appendChild(div);
-    });
-
-    boostersList.innerHTML = '';
-    boosters.forEach((boost, i) => {
-      const div = document.createElement('div');
-      div.className = 'shopItem' + ((selectedBoosters.jump === boost.value && boost.type==='jump') || (selectedBoosters.speed === boost.value && boost.type==='speed') ? ' selected' : '');
-      div.textContent = boost.name;
-      div.title = boost.description;
-      div.addEventListener('click', () => {
-        if (boost.type === 'jump') selectedBoosters.jump = boost.value;
-        else if (boost.type === 'speed') selectedBoosters.speed = boost.value;
-        updatePlayerBoosters();
-        updateShopUI();
+      window.addEventListener('keyup', e => {
+        if (
+          (e.code === 'ArrowLeft' && moveDirection === -1) ||
+          (e.code === 'KeyA' && moveDirection === -1) ||
+          (e.code === 'ArrowRight' && moveDirection === 1) ||
+          (e.code === 'KeyD' && moveDirection === 1)
+        ) {
+          moveDirection = 0;
+        }
       });
-      boostersList.appendChild(div);
-    });
-  }
 
-  function updateShopUI() {
-    Array.from(skinsList.children).forEach((el, i) => {
-      el.classList.toggle('selected', i === selectedSkinIndex);
-    });
-    Array.from(boostersList.children).forEach((el, i) => {
-      const boost = boosters[i];
-      const active = (boost.type === 'jump' && selectedBoosters.jump === boost.value) ||
-                     (boost.type === 'speed' && selectedBoosters.speed === boost.value);
-      el.classList.toggle('selected', active);
-    });
-  }
-
-  function updatePlayerBoosters() {
-    player.jumpForce = player.baseJumpForce + selectedBoosters.jump;
-    player.speedX = player.baseSpeedX + selectedBoosters.speed;
-  }
-
-  // --- Игра ---
-  let score = 0;
-  let coins = 0;
-  let isPlaying = false;
-
-  function resetGame() {
-    score = 0;
-    coins = 0;
-    player.x = width / 2 - player.width / 2;
-    player.y = height - 140;
-    player.vx = 0;
-    player.vy = 0;
-    updatePlayerBoosters();
-    createInitialPlatforms();
-  }
-
-  // Проверка коллизии игрока с платформой снизу
-  function checkCollision(platform) {
-    const playerBottom = player.y + player.height;
-    const platformTop = platform.y;
-    if (playerBottom <= platformTop && playerBottom + player.vy >= platformTop &&
-        player.x + player.width > platform.x && player.x < platform.x + platform.width &&
-        player.vy >= 0) {
-      return true;
-    }
-    return false;
-  }
-
-  // --- Управление ---
-  function handleInput(e) {
-    if (e.type === 'keydown') {
-      if (e.key === 'ArrowLeft') moveDirection = -1;
-      else if (e.key === 'ArrowRight') moveDirection = 1;
-    } else if (e.type === 'keyup') {
-      if ((e.key === 'ArrowLeft' && moveDirection === -1) || (e.key === 'ArrowRight' && moveDirection === 1)) {
+      // --- Касания для мобильных ---
+      let touchStartX = null;
+      canvas.addEventListener('touchstart', e => {
+        if (e.touches.length > 0) {
+          touchStartX = e.touches[0].clientX;
+        }
+      });
+      canvas.addEventListener('touchmove', e => {
+        if (e.touches.length > 0 && touchStartX !== null) {
+          let dx = e.touches[0].clientX - touchStartX;
+          if (dx > 20) moveDirection = 1;
+          else if (dx < -20) moveDirection = -1;
+          else moveDirection = 0;
+        }
+      });
+      canvas.addEventListener('touchend', e => {
         moveDirection = 0;
-      }
-    }
-  }
-
-  window.addEventListener('keydown', handleInput);
-  window.addEventListener('keyup', handleInput);
-
-  // --- Главный цикл ---
-  function gameLoop() {
-    if (!isPlaying) return;
-
-    ctx.clearRect(0, 0, width, height);
-
-    // Обновляем игрока
-    player.vy += player.gravity;
-    player.x += player.vx;
-    player.y += player.vy;
-
-    // Управление горизонтальным движением
-    player.vx = player.speedX * moveDirection;
-
-    // Горизонтальный выход за границы (перенос по горизонтали)
-    if (player.x > width) player.x = -player.width;
-    else if (player.x + player.width < 0) player.x = width;
-
-    // Проверка столкновения с платформами
-    let onPlatform = false;
-    for (const p of platforms) {
-      p.update();
-
-      if (checkCollision(p)) {
-        onPlatform = true;
-        player.vy = player.jumpForce;
-        player.y = p.y - player.height;
-
-        // Собираем монету, если есть
-        if (p.coin && !p.coinCollected) {
-          coins++;
-          p.coinCollected = true;
-        }
-      }
-    }
-
-    // Если падаем ниже экрана — конец игры
-    if (player.y > height) {
-      endGame();
-      return;
-    }
-
-    // Скроллим платформы и игрока вверх при достижении середины экрана по вертикали
-    if (player.y < height / 2) {
-      const dy = height / 2 - player.y;
-      player.y = height / 2;
-
-      platforms.forEach(p => {
-        p.y += dy;
+        touchStartX = null;
       });
 
-      // Добавляем новые платформы снизу при необходимости
-      while (platforms.length < maxPlatforms) {
-        let lastY = platforms[platforms.length - 1].y;
-        let x = Math.random() * (width - 70);
-        let y = lastY - platformGap;
-        let type = (Math.random() < 0.4) ? 'moving' : 'static';
-        platforms.push(new Platform(x, y, 70, 12, type));
+      // --- Магазин ---
+      function renderShop() {
+        shopCoinsEl.textContent = playerCoins;
+
+        // Скины
+        skinsList.innerHTML = '';
+        skins.forEach(skin => {
+          const div = document.createElement('div');
+          div.className = 'shop-item';
+          let owned = ownedSkins.includes(skin.id);
+          div.innerHTML = `
+            <span><span class="skin-color" style="background:${skin.color}"></span>${skin.name}</span>
+            <span>
+              ${owned ? (selectedSkin === skin.id ? 'Выбран' : `<button data-skin-id="${skin.id}">Выбрать</button>`) : `<button data-buy-skin-id="${skin.id}">Купить ${skin.price} SL</button>`}
+            </span>
+          `;
+          skinsList.appendChild(div);
+        });
+
+        // Усилители
+        boostersList.innerHTML = '';
+        boosters.forEach(booster => {
+          let owned = playerBoosts[booster.id] > 0;
+          const div = document.createElement('div');
+          div.className = 'shop-item';
+          div.innerHTML = `
+            <span>${booster.name} - ${booster.description}</span>
+            <span>
+              ${owned ? `Активирован` : `<button data-buy-booster-id="${booster.id}">Купить ${booster.price} SL</button>`}
+            </span>
+          `;
+          boostersList.appendChild(div);
+        });
       }
 
-      // Убираем платформы, вышедшие за низ экрана
-      platforms = platforms.filter(p => p.y < height + 20);
-    }
+      // Покупка и выбор в магазине
+      shopScreen.addEventListener('click', e => {
+        if (e.target.tagName !== 'BUTTON') return;
 
-    // Обновляем счет (высоту)
-    score = Math.max(score, Math.floor(height - player.y));
-    scoreEl.textContent = score;
-    coinsEl.textContent = `💰 ${coins}`;
+        // Покупка скина
+        const buySkinId = e.target.getAttribute('data-buy-skin-id');
+        if (buySkinId !== null) {
+          const skin = skins.find(s => s.id == buySkinId);
+          if (playerCoins >= skin.price) {
+            playerCoins -= skin.price;
+            ownedSkins.push(skin.id);
+            selectedSkin = skin.id;
+            saveShopData();
+            renderShop();
+            updateCoinsUI();
+          } else {
+            alert('Недостаточно монет');
+          }
+          return;
+        }
 
-    // Рисуем платформы
-    platforms.forEach(p => p.draw(ctx));
+        // Выбор скина
+        const skinId = e.target.getAttribute('data-skin-id');
+        if (skinId !== null) {
+          selectedSkin = parseInt(skinId);
+          saveShopData();
+          renderShop();
+          return;
+        }
 
-    // Рисуем игрока
-    ctx.fillStyle = player.color;
-    ctx.fillRect(player.x, player.y, player.width, player.height);
+        // Покупка усилителя
+        const buyBoosterId = e.target.getAttribute('data-buy-booster-id');
+        if (buyBoosterId !== null) {
+          const booster = boosters.find(b => b.id === buyBoosterId);
+          if (playerCoins >= booster.price) {
+            playerCoins -= booster.price;
+            playerBoosts[booster.id] = 1;
+            saveShopData();
+            renderShop();
+            updateCoinsUI();
+          } else {
+            alert('Недостаточно монет');
+          }
+          return;
+        }
+      });
 
-    requestAnimationFrame(gameLoop);
-  }
+      // Сохранение данных магазина
+      function saveShopData() {
+        localStorage.setItem('playerCoins', playerCoins);
+        localStorage.setItem('ownedSkins', JSON.stringify(ownedSkins));
+        localStorage.setItem('selectedSkin', selectedSkin);
+        localStorage.setItem('playerBoosts', JSON.stringify(playerBoosts));
+      }
 
-  // --- Старт игры ---
-  function startGame() {
-    resetGame();
-    isPlaying = true;
-    startScreen.classList.add('hidden');
-    gameOverMenu.classList.add('hidden');
-    shopPanel.classList.add('hidden');
-    ratingPanel.classList.add('hidden');
-    scoreEl.textContent = '0';
-    coinsEl.textContent = '💰 0';
-    gameLoop();
-  }
+      // --- Рейтинг ---
+      function updateRatingList() {
+        ratingList.innerHTML = '';
+        ratingData.forEach((player, index) => {
+          let el = document.createElement('div');
+          el.textContent = `${index + 1}. ${player.name} — ${player.score} м`;
+          ratingList.appendChild(el);
+        });
+      }
 
-  // --- Конец игры ---
-  function endGame() {
-    isPlaying = false;
-    finalScoreEl.textContent = score;
-    updateRating(score);
-    gameOverMenu.classList.remove('hidden');
-  }
+      // --- Кнопки ---
+      startGameBtn.onclick = () => startGame();
 
-  // --- Обработчики кнопок ---
-  startGameBtn.onclick = () => startGame();
-  restartBtn.onclick = () => startGame();
+      openShopBtn.onclick = () => {
+        menu.classList.remove('active');
+        shopScreen.classList.add('active');
+        renderShop();
+      };
 
-  openShopBtn.onclick = () => {
-    gameOverMenu.classList.add('hidden');
-    shopPanel.classList.remove('hidden');
-  };
+      openRatingBtn.onclick = () => {
+        menu.classList.remove('active');
+        ratingScreen.classList.add('active');
+        updateRatingList();
+      };
 
-  closeShopBtn.onclick = () => {
-    shopPanel.classList.add('hidden');
-    gameOverMenu.classList.remove('hidden');
-  };
+      restartGameBtn.onclick = () => {
+        gameOverScreen.classList.remove('active');
+        startGame();
+      };
 
-  openRatingBtn.onclick = () => {
-    gameOverMenu.classList.add('hidden');
-    showRatingPanel();
-  };
+      goToMenuBtn1.onclick = () => {
+        gameOverScreen.classList.remove('active');
+        menu.classList.add('active');
+      };
 
-  closeRatingBtn.onclick = () => {
-    ratingPanel.classList.add('hidden');
-    gameOverMenu.classList.remove('hidden');
-  };
+      closeShopBtn.onclick = () => {
+        shopScreen.classList.remove('active');
+        menu.classList.add('active');
+      };
 
-  // --- Инициализация магазина ---
-  initShop();
-  player.color = skins[selectedSkinIndex].color;
-  updatePlayerBoosters();
+      closeRatingBtn.onclick = () => {
+        ratingScreen.classList.remove('active');
+        menu.classList.add('active');
+      };
 
-})();
-</script>
+      // --- Старт ---
+      updateCoinsUI();
+      updateRatingList();
+    })();
+  </script>
 </body>
 </html>
+
 
