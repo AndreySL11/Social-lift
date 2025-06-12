@@ -1,276 +1,312 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Social Lift Jump</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
     body {
       margin: 0;
-      overflow: hidden;
-      font-family: 'Montserrat', sans-serif;
       background: linear-gradient(135deg, #1e3c72, #2a5298);
+      font-family: 'Montserrat', sans-serif;
+      overflow: hidden;
     }
     canvas {
       display: block;
       margin: 0 auto;
       background: #102a43;
       border-radius: 10px;
-      box-shadow: 0 0 20px rgba(255,255,255,0.2);
     }
-    #ui, #menu, #shop, #leaderboard {
+    #ui, #menu, #shop, #scoreboard {
       position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 320px;
-      display: flex;
-      justify-content: space-between;
-      color: #fff;
-      font-size: 20px;
-      font-weight: 600;
-      text-shadow: 0 0 5px #000;
-      user-select: none;
-    }
-    #restartBtn, .menuBtn {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: #2a5298;
-      border: none;
-      padding: 15px 40px;
-      font-size: 24px;
-      color: #fff;
-      font-weight: 700;
-      border-radius: 12px;
-      cursor: pointer;
-      box-shadow: 0 0 15px #1e3c72;
-      user-select: none;
-    }
-    .hidden { display: none; }
-    #mainMenu, #shopMenu, #leaderboardMenu {
-      display: none;
+      top: 0; left: 0; width: 100%; height: 100%;
+      display: flex; justify-content: center; align-items: center;
+      background: rgba(0,0,0,0.7);
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      gap: 20px;
       color: white;
-      text-align: center;
+      z-index: 10;
     }
-    .menuTitle {
-      font-size: 32px;
-      text-shadow: 2px 2px 4px #000;
-    }
-    .shopItem {
-      background: rgba(255,255,255,0.1);
-      padding: 10px;
+    #ui { background: none; flex-direction: row; justify-content: space-between; padding: 10px 20px; top: 0; height: auto; z-index: 2; }
+    .btn {
+      background: #2a5298;
+      color: #fff;
+      border: none;
+      padding: 15px 30px;
+      margin: 10px;
+      font-size: 18px;
+      font-weight: bold;
       border-radius: 10px;
-      margin: 5px 0;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background: #1e3c72;
+    }
+    #menu h1 {
+      font-size: 40px;
+      margin-bottom: 20px;
+      color: #fff;
+      text-shadow: 0 0 10px #000;
+    }
+    #coinsDisplay {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 18px;
+      color: #fff;
+      z-index: 3;
     }
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas" width="320" height="480"></canvas>
-
-  <div id="mainMenu">
-    <div class="menuTitle">Social Lift Jump</div>
-    <button class="menuBtn" onclick="startGame()">Начать игру</button>
-    <button class="menuBtn" onclick="showShop()">Магазин</button>
-    <button class="menuBtn" onclick="showLeaderboard()">Рейтинг</button>
+  <div id="menu">
+    <h1>SOCIAL LIFT</h1>
+    <button class="btn" onclick="startGame()">Играть</button>
+    <button class="btn" onclick="openShop()">Магазин</button>
+    <button class="btn" onclick="openScoreboard()">Рейтинг</button>
   </div>
 
-  <div id="shopMenu" class="hidden">
-    <div class="menuTitle">Магазин</div>
-    <div class="shopItem">Скин: Жёлтый - 0 монет</div>
-    <div class="shopItem">Скин: Красный - 10 монет</div>
-    <div class="shopItem">Усиление: +1 сила прыжка - 20 монет</div>
-    <button class="menuBtn" onclick="backToMenu()">Назад</button>
+  <div id="shop" style="display:none;">
+    <h2>Магазин</h2>
+    <p>Баланс: <span id="shopCoins">0</span> монет SL</p>
+    <div>
+      <button class="btn" onclick="buySkin('gold', 5)">Скин Золото (5 SL)</button>
+      <button class="btn" onclick="buyBooster('jump', 10)">Усилитель Прыжка (10 SL)</button>
+    </div>
+    <button class="btn" onclick="closeShop()">Назад</button>
   </div>
 
-  <div id="leaderboardMenu" class="hidden">
-    <div class="menuTitle">Рейтинг игроков</div>
-    <div id="leaderboardList">Игроков пока нет</div>
-    <button class="menuBtn" onclick="backToMenu()">Назад</button>
+  <div id="scoreboard" style="display:none;">
+    <h2>Таблица лидеров</h2>
+    <ul id="scoreList" style="list-style:none; padding:0;"></ul>
+    <button class="btn" onclick="closeScoreboard()">Назад</button>
   </div>
 
-  <div id="ui" class="hidden">
+  <div id="coinsDisplay">Монеты SL: <span id="coins">0</span></div>
+  <div id="ui">
     <div>Высота: <span id="score">0</span> м</div>
-    <div>Монеты: <span id="coins">0</span></div>
   </div>
-
-  <button id="restartBtn" class="hidden" onclick="restartGame()">Заново</button>
+  <canvas id="gameCanvas" width="320" height="480"></canvas>
 
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const width = canvas.width, height = canvas.height;
-    const ui = document.getElementById('ui');
-    const restartBtn = document.getElementById('restartBtn');
+
     const scoreEl = document.getElementById('score');
     const coinsEl = document.getElementById('coins');
-    const menu = document.getElementById('mainMenu');
-    const shop = document.getElementById('shopMenu');
-    const leaderboard = document.getElementById('leaderboardMenu');
-    const leaderboardList = document.getElementById('leaderboardList');
+    const shopCoinsEl = document.getElementById('shopCoins');
+    const scoreList = document.getElementById('scoreList');
 
-    let player = { x: 160, y: 380, width: 30, height: 40, vy: 0, vx: 0, gravity: 0.3, jumpForce: -8, color: '#FFD700' };
-    let platforms = [], coinsCount = 0, score = 0, gameOver = false, moveDir = 0;
+    let player = {
+      x: width/2 - 15, y: height - 60, width: 30, height: 40,
+      vx: 0, vy: 0,
+      gravity: 0.3, jumpForce: -8,
+      color: '#FFD700',
+      skin: 'default'
+    };
+
+    let moveDirection = 0;
+    let platforms = [];
+    let coins = 0;
+    let score = 0;
+    let scrollOffset = 0;
+    let boosters = { jump: false };
+    let gameOver = false;
 
     class Platform {
-      constructor(x, y, w, type = 'static') {
-        this.x = x; this.y = y; this.w = w; this.h = 10; this.type = type;
-        this.coin = Math.random() < 0.4; this.coinCollected = false;
-        this.baseX = x; this.direction = 1;
+      constructor(x, y, w=60, h=10, type='static') {
+        this.x = x; this.y = y; this.w = w; this.h = h;
+        this.coin = Math.random() < 0.3;
+        this.collected = false;
+        this.type = type;
+        this.baseX = x;
+        this.dir = 1;
       }
+
       update() {
         if (this.type === 'moving') {
-          this.x += 1.5 * this.direction;
-          if (this.x < this.baseX - 40 || this.x > this.baseX + 40) this.direction *= -1;
+          this.x += this.dir * 1.5;
+          if (this.x < this.baseX - 40 || this.x > this.baseX + 40) this.dir *= -1;
         }
       }
+
       draw() {
         ctx.fillStyle = '#4A90E2';
         ctx.fillRect(this.x, this.y, this.w, this.h);
-        if (this.coin && !this.coinCollected) {
+        if (this.coin && !this.collected) {
+          ctx.beginPath();
+          ctx.arc(this.x + this.w/2, this.y - 10, 8, 0, Math.PI * 2);
           ctx.fillStyle = '#FFD700';
-          ctx.beginPath(); ctx.arc(this.x + this.w / 2, this.y - 10, 6, 0, Math.PI * 2); ctx.fill();
+          ctx.fill();
+          ctx.fillStyle = '#000';
+          ctx.font = '10px Montserrat';
+          ctx.textAlign = 'center';
+          ctx.fillText('SL', this.x + this.w/2, this.y - 7);
         }
       }
     }
 
     function createPlatforms() {
-      platforms = [new Platform(110, 440, 100)];
-      let y = 380;
-      for (let i = 0; i < 10; i++) {
-        y -= 40 + Math.random() * 20;
-        platforms.push(new Platform(Math.random() * 260, y, 60, Math.random() < 0.3 ? 'moving' : 'static'));
+      platforms = [];
+      platforms.push(new Platform(width/2 - 50, height - 20, 100, 15)); // стартовая
+      let y = height - 60;
+      while (y > -2000) {
+        const x = Math.random() * (width - 60);
+        const type = Math.random() < 0.3 ? 'moving' : 'static';
+        platforms.push(new Platform(x, y, 60, 10, type));
+        y -= 50 + Math.random() * 20;
       }
     }
 
     function drawPlayer() {
       ctx.fillStyle = player.color;
       ctx.fillRect(player.x, player.y, player.width, player.height);
+      ctx.fillStyle = '#000';
+      ctx.font = '14px Montserrat';
+      ctx.textAlign = 'center';
+      ctx.fillText('SL', player.x + player.width/2, player.y + player.height/2);
     }
 
-    function updateGame() {
+    function update() {
       if (gameOver) return;
-      player.vx = moveDir * 3;
+      player.vx = moveDirection * 3;
       player.x += player.vx;
+      if (player.x < -player.width) player.x = width;
+      if (player.x > width) player.x = -player.width;
+
       player.vy += player.gravity;
       player.y += player.vy;
-      if (player.x < -30) player.x = width;
-      if (player.x > width) player.x = -30;
 
-      platforms.forEach(p => {
+      for (let p of platforms) {
         p.update();
         if (
           player.vy > 0 &&
           player.x + player.width > p.x &&
           player.x < p.x + p.w &&
-          player.y + player.height > p.y &&
-          player.y + player.height < p.y + p.h + player.vy
+          player.y + player.height >= p.y &&
+          player.y + player.height <= p.y + 10
         ) {
-          player.vy = player.jumpForce;
-          if (p.coin && !p.coinCollected) {
-            p.coinCollected = true;
-            coinsCount++;
-            coinsEl.textContent = coinsCount;
+          player.vy = boosters.jump ? -12 : player.jumpForce;
+          if (p.coin && !p.collected) {
+            p.collected = true;
+            coins += 1;
+            coinsEl.textContent = coins;
+            shopCoinsEl.textContent = coins;
           }
         }
-      });
+      }
 
       if (player.y < height / 3) {
-        const diff = (height / 3 - player.y);
+        let diff = (height / 3) - player.y;
         player.y = height / 3;
-        platforms.forEach(p => p.y += diff);
-        score += Math.floor(diff);
-        scoreEl.textContent = score;
+        for (let p of platforms) p.y += diff;
+        scrollOffset += diff;
+        scoreEl.textContent = Math.floor(scrollOffset);
       }
 
-      platforms = platforms.filter(p => p.y < height + 10);
-      while (platforms.length < 10) {
-        const y = platforms[platforms.length - 1].y - 40;
-        platforms.push(new Platform(Math.random() * 260, y, 60, Math.random() < 0.3 ? 'moving' : 'static'));
-      }
-
+      platforms = platforms.filter(p => p.y < height + 20);
       if (player.y > height) {
         gameOver = true;
-        restartBtn.classList.remove('hidden');
-        updateLeaderboard(score);
+        endGame();
       }
     }
 
     function draw() {
       ctx.clearRect(0, 0, width, height);
-      platforms.forEach(p => p.draw());
+      for (let p of platforms) p.draw();
       drawPlayer();
     }
 
-    function loop() {
-      updateGame();
+    function gameLoop() {
+      update();
       draw();
-      if (!gameOver) requestAnimationFrame(loop);
+      if (!gameOver) requestAnimationFrame(gameLoop);
     }
 
     function startGame() {
-      menu.style.display = 'none';
-      shop.classList.add('hidden');
-      leaderboard.classList.add('hidden');
-      ui.classList.remove('hidden');
-      restartBtn.classList.add('hidden');
-      player = { x: 160, y: 380, width: 30, height: 40, vy: 0, vx: 0, gravity: 0.3, jumpForce: -8, color: '#FFD700' };
-      score = 0;
-      coinsCount = 0;
-      scoreEl.textContent = '0';
-      coinsEl.textContent = '0';
-      gameOver = false;
+      document.getElementById('menu').style.display = 'none';
       createPlatforms();
-      loop();
+      coins = 0;
+      score = 0;
+      scrollOffset = 0;
+      player.x = width/2 - 15;
+      player.y = height - 60;
+      player.vy = 0;
+      gameOver = false;
+      boosters.jump = false;
+      gameLoop();
     }
 
-    function restartGame() {
-      startGame();
+    function endGame() {
+      setTimeout(() => {
+        document.getElementById('menu').style.display = 'flex';
+        updateScoreboard();
+      }, 800);
     }
 
-    function showShop() {
-      menu.style.display = 'none';
-      shop.classList.remove('hidden');
+    function openShop() {
+      document.getElementById('menu').style.display = 'none';
+      document.getElementById('shop').style.display = 'flex';
     }
 
-    function showLeaderboard() {
-      menu.style.display = 'none';
-      leaderboard.classList.remove('hidden');
+    function closeShop() {
+      document.getElementById('shop').style.display = 'none';
+      document.getElementById('menu').style.display = 'flex';
     }
 
-    function backToMenu() {
-      menu.style.display = 'flex';
-      shop.classList.add('hidden');
-      leaderboard.classList.add('hidden');
+    function openScoreboard() {
+      document.getElementById('menu').style.display = 'none';
+      document.getElementById('scoreboard').style.display = 'flex';
     }
 
-    function updateLeaderboard(score) {
-      const name = window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name || 'Игрок';
-      leaderboardList.innerHTML += `<div>${name}: ${score} м</div>`;
+    function closeScoreboard() {
+      document.getElementById('scoreboard').style.display = 'none';
+      document.getElementById('menu').style.display = 'flex';
     }
 
+    function buySkin(name, price) {
+      if (coins >= price) {
+        coins -= price;
+        player.color = name === 'gold' ? '#FFD700' : '#ccc';
+        coinsEl.textContent = coins;
+        shopCoinsEl.textContent = coins;
+        alert('Скин применен!');
+      } else alert('Недостаточно монет!');
+    }
+
+    function buyBooster(name, price) {
+      if (coins >= price) {
+        coins -= price;
+        boosters[name] = true;
+        coinsEl.textContent = coins;
+        shopCoinsEl.textContent = coins;
+        alert('Усилитель активирован!');
+      } else alert('Недостаточно монет!');
+    }
+
+    function updateScoreboard() {
+      scoreList.innerHTML = `<li>Ты: ${Math.floor(scrollOffset)} м</li>
+                             <li>Игрок1: 750 м</li>
+                             <li>Игрок2: 620 м</li>
+                             <li>Игрок3: 580 м</li>`;
+    }
+
+    // управление с телефона
     window.addEventListener('touchstart', e => {
-      moveDir = e.touches[0].clientX < window.innerWidth / 2 ? -1 : 1;
+      const x = e.touches[0].clientX;
+      moveDirection = x < window.innerWidth / 2 ? -1 : 1;
     });
-    window.addEventListener('touchend', () => moveDir = 0);
-    window.addEventListener('mousedown', e => {
-      moveDir = e.clientX < window.innerWidth / 2 ? -1 : 1;
-    });
-    window.addEventListener('mouseup', () => moveDir = 0);
+    window.addEventListener('touchend', () => moveDirection = 0);
 
-    window.onload = () => {
-      menu.style.display = 'flex';
-    };
+    // управление с мыши
+    window.addEventListener('mousedown', e => {
+      moveDirection = e.clientX < window.innerWidth / 2 ? -1 : 1;
+    });
+    window.addEventListener('mouseup', () => moveDirection = 0);
   </script>
 </body>
 </html>
+
 
 
