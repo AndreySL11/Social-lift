@@ -6,56 +6,20 @@
   <title>Social Lift Jump</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
-    body {
-      margin: 0;
-      background: linear-gradient(135deg, #1e3c72, #2a5298);
-      font-family: 'Montserrat', sans-serif;
-      overflow: hidden;
-    }
-    canvas {
-      display: block;
-      margin: 0 auto;
-      background: #102a43;
-      border-radius: 10px;
-    }
-    #ui, #menu, #shop, #scoreboard {
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      display: flex; justify-content: center; align-items: center;
-      background: rgba(0,0,0,0.7);
-      flex-direction: column;
-      color: white;
-      z-index: 10;
-    }
-    #ui { background: none; flex-direction: row; justify-content: space-between; padding: 10px 20px; top: 0; height: auto; z-index: 2; }
-    .btn {
-      background: #2a5298;
-      color: #fff;
-      border: none;
-      padding: 15px 30px;
-      margin: 10px;
-      font-size: 18px;
-      font-weight: bold;
-      border-radius: 10px;
-      cursor: pointer;
-    }
-    .btn:hover {
-      background: #1e3c72;
-    }
-    #menu h1 {
-      font-size: 40px;
-      margin-bottom: 20px;
-      color: #fff;
-      text-shadow: 0 0 10px #000;
-    }
-    #coinsDisplay {
-      position: absolute;
-      top: 10px;
-      right: 20px;
-      font-size: 18px;
-      color: #fff;
-      z-index: 3;
-    }
+    * { user-select: none; -webkit-user-select: none; }
+    body { margin:0; background: linear-gradient(135deg,#1e3c72,#2a5298); font-family:Montserrat,sans-serif; overflow:hidden;}
+    canvas { background:#102a43; display:block; margin:0 auto; border-radius:10px; }
+    #menu,#shop,#scoreboard{position:fixed;top:0;left:0;width:100%;height:100%;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      background:rgba(0,0,0,0.8); z-index:10;color:#fff;}
+    .btn{background:#2a5298;color:#fff;border:none;padding:12px 24px;margin:8px;
+      font-size:18px;font-weight:600;border-radius:8px;cursor:pointer;}
+    .btn:hover{background:#1e3c72;}
+    #ui{position:fixed;top:10px;left:10px;display:flex;gap:20px;color:#fff;font-size:18px;z-index:2;}
+    #coinsDisplay{position:fixed;top:10px;right:10px;color:#fff;font-size:18px;z-index:2;}
+    h1{margin-bottom:20px;text-shadow:0 0 10px #000;}
+    ul{list-style:none;padding:0;}
+    li{margin:4px;}
   </style>
 </head>
 <body>
@@ -68,245 +32,209 @@
 
   <div id="shop" style="display:none;">
     <h2>Магазин</h2>
-    <p>Баланс: <span id="shopCoins">0</span> монет SL</p>
-    <div>
-      <button class="btn" onclick="buySkin('gold', 5)">Скин Золото (5 SL)</button>
-      <button class="btn" onclick="buyBooster('jump', 10)">Усилитель Прыжка (10 SL)</button>
-    </div>
+    <div>Баланс: <span id="shopCoins">0</span> SL</div>
+    <div id="shopItems"></div>
     <button class="btn" onclick="closeShop()">Назад</button>
   </div>
 
   <div id="scoreboard" style="display:none;">
     <h2>Таблица лидеров</h2>
-    <ul id="scoreList" style="list-style:none; padding:0;"></ul>
+    <ul id="scoreList"></ul>
     <button class="btn" onclick="closeScoreboard()">Назад</button>
   </div>
 
-  <div id="coinsDisplay">Монеты SL: <span id="coins">0</span></div>
-  <div id="ui">
-    <div>Высота: <span id="score">0</span> м</div>
-  </div>
+  <div id="ui"><div>Высота: <span id="score">0</span> м</div></div>
+  <div id="coinsDisplay">Монеты: <span id="coins">0</span> SL</div>
   <canvas id="gameCanvas" width="320" height="480"></canvas>
 
   <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const width = canvas.width, height = canvas.height;
-
-    const scoreEl = document.getElementById('score');
-    const coinsEl = document.getElementById('coins');
-    const shopCoinsEl = document.getElementById('shopCoins');
-    const scoreList = document.getElementById('scoreList');
-
-    let player = {
-      x: width/2 - 15, y: height - 60, width: 30, height: 40,
-      vx: 0, vy: 0,
-      gravity: 0.3, jumpForce: -8,
-      color: '#FFD700',
-      skin: 'default'
+    // —————————————————————————————————————————————————————————————————
+    const STORAGE = {
+      coins: +localStorage.getItem('coins') || 0,
+      skin: localStorage.getItem('skin') || 'default',
+      boosters: JSON.parse(localStorage.getItem('boosters')) || {},
+      scores: JSON.parse(localStorage.getItem('scores')) || []
+    };
+    const SKINS = {
+      default: { color: '#FFD700', price: 0 },
+      gold:    { color: '#FFD700', price: 5 },
+      silver:  { color: '#C0C0C0', price: 5 },
+      blue:    { color: '#00BFFF', price: 5 },
+      green:   { color: '#7CFC00', price: 5 }
+    };
+    const BOOSTERS = {
+      jump: { title:'Усилитель прыжка', price:10, effect: () => true }
     };
 
-    let moveDirection = 0;
-    let platforms = [];
-    let coins = 0;
-    let score = 0;
-    let scrollOffset = 0;
-    let boosters = { jump: false };
-    let gameOver = false;
+    const canvas = document.getElementById('gameCanvas'), ctx = canvas.getContext('2d');
+    const width=canvas.width, height=canvas.height;
+    const scoreEl = document.getElementById('score'), coinsEl = document.getElementById('coins'), shopCoinsEl = document.getElementById('shopCoins');
+    const shopItemsDiv = document.getElementById('shopItems'), scoreListUl = document.getElementById('scoreList');
+
+    let player = { x:width/2-15, y:height-60, w:30, h:40, vx:0, vy:0, gravity:0.3, jump:-8, skin:STORAGE.skin };
+    let moveDir=0, platforms=[], coins=0, score=0, scroll=0, gameOver=false;
+
+    function save() {
+      localStorage.setItem('coins', STORAGE.coins);
+      localStorage.setItem('skin', player.skin);
+      localStorage.setItem('boosters', JSON.stringify(STORAGE.boosters));
+      localStorage.setItem('scores', JSON.stringify(STORAGE.scores));
+    }
+
+    function initShop() {
+      shopCoinsEl.textContent = STORAGE.coins;
+      shopItemsDiv.innerHTML = '';
+      for(let key in SKINS){
+        const s=SKINS[key];
+        if(key!==STORAGE.skin){
+          const btn=document.createElement('button');
+          btn.className='btn';
+          btn.textContent=`Скин ${key} (${s.price} SL)`;
+          btn.onclick=()=>buySkin(key,s.price);
+          shopItemsDiv.appendChild(btn);
+        }
+      }
+      for(let key in BOOSTERS){
+        if(!STORAGE.boosters[key]){
+          const b=BOOSTERS[key];
+          const btn=document.createElement('button');
+          btn.className='btn';
+          btn.textContent=`${b.title} (${b.price} SL)`;
+          btn.onclick=()=>buyBooster(key,b.price);
+          shopItemsDiv.appendChild(btn);
+        }
+      }
+    }
+
+    function buySkin(key, price){
+      if(STORAGE.coins>=price){
+        STORAGE.coins-=price; player.skin=key; player.color=SKINS[key].color;
+        STORAGE.skin=key; save(); alert(`Скин ${key} куплен!`);
+        initShop(); updateHUD();
+      } else alert('Недостаточно монет!');
+    }
+    function buyBooster(key, price){
+      if(STORAGE.coins>=price){
+        STORAGE.coins-=price; STORAGE.boosters[key]=true; save(); alert('Усилитель активирован!');
+        initShop(); updateHUD();
+      } else alert('Недостаточно монет!');
+    }
+
+    function updateHUD(){
+      coinsEl.textContent = STORAGE.coins;
+      shopCoinsEl.textContent = STORAGE.coins;
+    }
 
     class Platform {
-      constructor(x, y, w=60, h=10, type='static') {
-        this.x = x; this.y = y; this.w = w; this.h = h;
-        this.coin = Math.random() < 0.3;
-        this.collected = false;
-        this.type = type;
-        this.baseX = x;
-        this.dir = 1;
+      constructor(x,y,w=60,h=10){
+        this.x=x; this.y=y; this.w=w; this.h=h;
+        this.coin=Math.random()<0.3; this.col=false;
+        this.baseX=x; this.dir=(Math.random()<0.3?1:0);
       }
-
-      update() {
-        if (this.type === 'moving') {
-          this.x += this.dir * 1.5;
-          if (this.x < this.baseX - 40 || this.x > this.baseX + 40) this.dir *= -1;
+      update(){
+        if(this.dir){
+          this.x+=1.5*this.dir;
+          if(this.x< this.baseX-40 || this.x> this.baseX+40) this.dir*=-1;
         }
       }
-
-      draw() {
-        ctx.fillStyle = '#4A90E2';
-        ctx.fillRect(this.x, this.y, this.w, this.h);
-        if (this.coin && !this.collected) {
+      draw(){
+        ctx.fillStyle='#4A90E2';
+        ctx.fillRect(this.x,this.y,this.w,this.h);
+        if(this.coin&&!this.col){
           ctx.beginPath();
-          ctx.arc(this.x + this.w/2, this.y - 10, 8, 0, Math.PI * 2);
-          ctx.fillStyle = '#FFD700';
-          ctx.fill();
-          ctx.fillStyle = '#000';
-          ctx.font = '10px Montserrat';
-          ctx.textAlign = 'center';
-          ctx.fillText('SL', this.x + this.w/2, this.y - 7);
+          ctx.arc(this.x+this.w/2,this.y-10,8,0,Math.PI*2);
+          ctx.fillStyle='#FFD700'; ctx.fill();
+          ctx.fillStyle='#000'; ctx.font='10px Montserrat'; ctx.textAlign='center';
+          ctx.fillText('SL',this.x+this.w/2,this.y-7);
         }
       }
     }
 
-    function createPlatforms() {
-      platforms = [];
-      platforms.push(new Platform(width/2 - 50, height - 20, 100, 15)); // стартовая
-      let y = height - 60;
-      while (y > -2000) {
-        const x = Math.random() * (width - 60);
-        const type = Math.random() < 0.3 ? 'moving' : 'static';
-        platforms.push(new Platform(x, y, 60, 10, type));
-        y -= 50 + Math.random() * 20;
+    function createPlatforms(){
+      platforms=[]; platforms.push(new Platform(width/2-50,height-20,100,15));
+      let y=height-60;
+      while(y>-2000){
+        const x=Math.random()*(width-60);
+        platforms.push(new Platform(x,y));
+        y-=50+Math.random()*20;
       }
     }
 
-    function drawPlayer() {
-      ctx.fillStyle = player.color;
-      ctx.fillRect(player.x, player.y, player.width, player.height);
-      ctx.fillStyle = '#000';
-      ctx.font = '14px Montserrat';
-      ctx.textAlign = 'center';
-      ctx.fillText('SL', player.x + player.width/2, player.y + player.height/2);
+    function drawPlayer(){
+      ctx.fillStyle=SKINS[player.skin].color;
+      ctx.fillRect(player.x,player.y,player.w,player.h);
+      ctx.fillStyle='#000'; ctx.font='14px Montserrat'; ctx.textAlign='center';
+      ctx.fillText('SL',player.x+player.w/2,player.y+player.h/2);
     }
 
-    function update() {
-      if (gameOver) return;
-      player.vx = moveDirection * 3;
-      player.x += player.vx;
-      if (player.x < -player.width) player.x = width;
-      if (player.x > width) player.x = -player.width;
-
-      player.vy += player.gravity;
-      player.y += player.vy;
-
-      for (let p of platforms) {
+    function update(){
+      if(gameOver) return;
+      player.vx=moveDir*3; player.x+=player.vx;
+      if(player.x<-player.w) player.x=width;
+      if(player.x>width) player.x=-player.w;
+      player.vy+=player.gravity; player.y+=player.vy;
+      platforms.forEach(p=>{
         p.update();
-        if (
-          player.vy > 0 &&
-          player.x + player.width > p.x &&
-          player.x < p.x + p.w &&
-          player.y + player.height >= p.y &&
-          player.y + player.height <= p.y + 10
-        ) {
-          player.vy = boosters.jump ? -12 : player.jumpForce;
-          if (p.coin && !p.collected) {
-            p.collected = true;
-            coins += 1;
-            coinsEl.textContent = coins;
-            shopCoinsEl.textContent = coins;
-          }
+        if(player.vy>0 &&player.x+player.w>p.x && player.x<p.x+p.w 
+          && player.y+player.h>=p.y && player.y+player.h<=p.y+10){
+          player.vy = STORAGE.boosters.jump ? -12 : player.jump;
+          if(p.coin&&!p.col){ p.col=true; STORAGE.coins++; coins++; updateHUD(); save();}
         }
+      });
+      if(player.y< height/3){
+        const d=(height/3)-player.y;
+        player.y=height/3;
+        platforms.forEach(p=>p.y+=d);
+        scroll+=d; scoreEl.textContent=Math.floor(scroll);
       }
-
-      if (player.y < height / 3) {
-        let diff = (height / 3) - player.y;
-        player.y = height / 3;
-        for (let p of platforms) p.y += diff;
-        scrollOffset += diff;
-        scoreEl.textContent = Math.floor(scrollOffset);
-      }
-
-      platforms = platforms.filter(p => p.y < height + 20);
-      if (player.y > height) {
-        gameOver = true;
-        endGame();
-      }
+      platforms = platforms.filter(p=>p.y<height+20);
+      if(player.y>height){gameOver=true; endGame();}
     }
 
-    function draw() {
-      ctx.clearRect(0, 0, width, height);
-      for (let p of platforms) p.draw();
+    function draw(){
+      ctx.clearRect(0,0,width,height);
+      platforms.forEach(p=>p.draw());
       drawPlayer();
     }
 
-    function gameLoop() {
-      update();
-      draw();
-      if (!gameOver) requestAnimationFrame(gameLoop);
+    function gameLoop(){
+      update(); draw();
+      if(!gameOver) requestAnimationFrame(gameLoop);
     }
 
-    function startGame() {
-      document.getElementById('menu').style.display = 'none';
-      createPlatforms();
-      coins = 0;
-      score = 0;
-      scrollOffset = 0;
-      player.x = width/2 - 15;
-      player.y = height - 60;
-      player.vy = 0;
-      gameOver = false;
-      boosters.jump = false;
-      gameLoop();
+    function startGame(){
+      document.getElementById('menu').style.display='none';
+      updateHUD(); createPlatforms();
+      player.x=width/2-15;player.y=height-60;player.vy=0;scroll=0;coins=0;score=0;
+      gameOver=false; gameLoop();
     }
 
-    function endGame() {
-      setTimeout(() => {
-        document.getElementById('menu').style.display = 'flex';
-        updateScoreboard();
-      }, 800);
+    function endGame(){
+      STORAGE.scores.push(Math.floor(scroll));
+      STORAGE.scores = STORAGE.scores.sort((a,b)=> b-a).slice(0,5);
+      save();
+      setTimeout(()=>{ document.getElementById('menu').style.display='flex'; },500);
     }
 
-    function openShop() {
-      document.getElementById('menu').style.display = 'none';
-      document.getElementById('shop').style.display = 'flex';
+    function openShop(){ initShop(); document.getElementById('menu').style.display='none'; document.getElementById('shop').style.display='flex';}
+    function closeShop(){ document.getElementById('shop').style.display='none'; document.getElementById('menu').style.display='flex';}
+    function openScoreboard(){
+      document.getElementById('menu').style.display='none';
+      scoreListUl.innerHTML = STORAGE.scores.map((s,i)=>`<li>${i+1}. ${s} м</li>`).join('');
+      document.getElementById('scoreboard').style.display='flex';
     }
+    function closeScoreboard(){ document.getElementById('scoreboard').style.display='none'; document.getElementById('menu').style.display='flex';}
 
-    function closeShop() {
-      document.getElementById('shop').style.display = 'none';
-      document.getElementById('menu').style.display = 'flex';
-    }
+    window.addEventListener('touchstart',e=>{moveDir = e.touches[0].clientX<window.innerWidth/2?-1:1;});
+    window.addEventListener('touchend',()=>moveDir=0);
+    window.addEventListener('mousedown',e=>{moveDir=e.clientX<window.innerWidth/2?-1:1;});
+    window.addEventListener('mouseup',()=>moveDir=0);
 
-    function openScoreboard() {
-      document.getElementById('menu').style.display = 'none';
-      document.getElementById('scoreboard').style.display = 'flex';
-    }
-
-    function closeScoreboard() {
-      document.getElementById('scoreboard').style.display = 'none';
-      document.getElementById('menu').style.display = 'flex';
-    }
-
-    function buySkin(name, price) {
-      if (coins >= price) {
-        coins -= price;
-        player.color = name === 'gold' ? '#FFD700' : '#ccc';
-        coinsEl.textContent = coins;
-        shopCoinsEl.textContent = coins;
-        alert('Скин применен!');
-      } else alert('Недостаточно монет!');
-    }
-
-    function buyBooster(name, price) {
-      if (coins >= price) {
-        coins -= price;
-        boosters[name] = true;
-        coinsEl.textContent = coins;
-        shopCoinsEl.textContent = coins;
-        alert('Усилитель активирован!');
-      } else alert('Недостаточно монет!');
-    }
-
-    function updateScoreboard() {
-      scoreList.innerHTML = `<li>Ты: ${Math.floor(scrollOffset)} м</li>
-                             <li>Игрок1: 750 м</li>
-                             <li>Игрок2: 620 м</li>
-                             <li>Игрок3: 580 м</li>`;
-    }
-
-    // управление с телефона
-    window.addEventListener('touchstart', e => {
-      const x = e.touches[0].clientX;
-      moveDirection = x < window.innerWidth / 2 ? -1 : 1;
-    });
-    window.addEventListener('touchend', () => moveDirection = 0);
-
-    // управление с мыши
-    window.addEventListener('mousedown', e => {
-      moveDirection = e.clientX < window.innerWidth / 2 ? -1 : 1;
-    });
-    window.addEventListener('mouseup', () => moveDirection = 0);
+    window.onload=()=>{player.skin=STORAGE.skin; updateHUD();}
   </script>
 </body>
 </html>
+
 
 
 
