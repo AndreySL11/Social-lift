@@ -1,48 +1,179 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Social Lift Jump</title>
-  <style>
-    body, html { margin: 0; padding: 0; overflow: hidden; background: #87ceeb; font-family: sans-serif; }
-    canvas { display: block; background: #cceeff; margin: auto; }
-    #menu, #gameOverScreen, #skinSelector {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6); color: #fff; display: flex;
-      align-items: center; justify-content: center; flex-direction: column;
-      font-size: 20px; z-index: 2;
-    }
-    button { margin: 10px; padding: 10px 20px; font-size: 20px; cursor: pointer; }
-    #skinSelector { display: none; }
-    .skin-option {
-      width: 40px; height: 40px; margin: 5px; display: inline-block;
-      cursor: pointer; border: 3px solid transparent;
-    }
-    .skin-option.selected { border-color: yellow; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Lift Jump</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        canvas { display: block; margin: auto; background: #87CEEB; }
+        #menu, #gameOverScreen, #skinMenu {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); color: white; display: flex;
+            flex-direction: column; align-items: center; justify-content: center;
+            font-family: Arial, sans-serif; display: none;
+        }
+        button {
+            padding: 10px 20px; margin: 10px; font-size: 18px;
+        }
+    </style>
 </head>
 <body>
-  <canvas id="gameCanvas" width="400" height="600"></canvas>
-  <div id="menu">
+<canvas id="game" width="400" height="600"></canvas>
+<div id="menu">
     <h1>Social Lift Jump</h1>
-    <button id="startBtn">Играть</button>
-    <button id="openSkinsBtn">Скины</button>
-  </div>
-  <div id="skinSelector">
-    <h2>Выбери скин</h2>
-    <div id="skinsContainer"></div>
-    <button id="closeSkinsBtn">Назад</button>
-  </div>
-  <div id="gameOverScreen" style="display:none;">
+    <button onclick="startGame()">Играть</button>
+    <button onclick="showSkinMenu()">Скины</button>
+</div>
+<div id="gameOverScreen">
     <h2>Игра окончена</h2>
-    <div id="finalHeight">Высота: 0 м</div>
-    <div id="coinsEarned">Заработано монет: 0</div>
-    <button id="restartBtn">Заново</button>
-  </div>
-  <script>
-    // JavaScript-код загружается в следующем шаге
-  </script>
+    <p id="scoreText"></p>
+    <button onclick="restartGame()">Сыграть снова</button>
+</div>
+<div id="skinMenu">
+    <h2>Выберите скин</h2>
+    <div id="skins"></div>
+    <button onclick="closeSkinMenu()">Назад</button>
+</div>
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+let menu = document.getElementById("menu");
+let gameOverScreen = document.getElementById("gameOverScreen");
+let skinMenu = document.getElementById("skinMenu");
+let scoreText = document.getElementById("scoreText");
+
+let skins = [
+    {color: "red", name: "Red", cost: 0},
+    {color: "green", name: "Green", cost: 50},
+    {color: "blue", name: "Blue", cost: 100}
+];
+let selectedSkin = localStorage.getItem("selectedSkin") || "red";
+let coins = parseInt(localStorage.getItem("coins")) || 0;
+
+function showSkinMenu() {
+    skinMenu.style.display = "flex";
+    document.getElementById("skins").innerHTML = "";
+    skins.forEach(skin => {
+        let btn = document.createElement("button");
+        btn.textContent = `${skin.name} (${skin.cost} монет)`;
+        if (skin.color === selectedSkin) btn.style.border = "2px solid gold";
+        btn.onclick = () => {
+            if (coins >= skin.cost) {
+                selectedSkin = skin.color;
+                localStorage.setItem("selectedSkin", selectedSkin);
+                renderSkinMenu();
+            }
+        };
+        document.getElementById("skins").appendChild(btn);
+    });
+}
+function renderSkinMenu() { showSkinMenu(); }
+function closeSkinMenu() { skinMenu.style.display = "none"; }
+
+let player = {x: 200, y: 500, vy: 0, width: 30, height: 30};
+let platforms = [];
+let score = 0;
+let gameRunning = false;
+
+function createPlatform(y) {
+    let x = Math.random() * (canvas.width - 60);
+    return {x, y, width: 60, height: 10};
+}
+function startGame() {
+    menu.style.display = "none";
+    gameOverScreen.style.display = "none";
+    skinMenu.style.display = "none";
+    platforms = [];
+    for (let i = 0; i < 10; i++) {
+        platforms.push(createPlatform(i * 60));
+    }
+    player.x = 200;
+    player.y = 500;
+    player.vy = -10;
+    score = 0;
+    gameRunning = true;
+    loop();
+}
+
+function gameOver() {
+    gameRunning = false;
+    gameOverScreen.style.display = "flex";
+    scoreText.textContent = `Ваш счёт: ${Math.floor(score)} м. Монет: ${coins}`;
+}
+
+function restartGame() {
+    startGame();
+}
+
+function drawPlayer() {
+    ctx.fillStyle = selectedSkin;
+    ctx.fillRect(player.x, player.y, player.width, player.height);
+}
+
+function drawPlatforms() {
+    ctx.fillStyle = "brown";
+    platforms.forEach(p => ctx.fillRect(p.x, p.y, p.width, p.height));
+}
+
+function loop() {
+    if (!gameRunning) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    player.vy += 0.4;
+    player.y += player.vy;
+
+    if (player.y < 300) {
+        let diff = 300 - player.y;
+        player.y = 300;
+        platforms.forEach(p => p.y += diff);
+        score += diff * 0.1;
+        coins += Math.floor(diff * 0.01);
+    }
+
+    platforms = platforms.filter(p => p.y < canvas.height);
+    while (platforms.length < 10) {
+        platforms.push(createPlatform(-10));
+    }
+
+    platforms.forEach(p => {
+        if (player.vy > 0 &&
+            player.x + player.width > p.x &&
+            player.x < p.x + p.width &&
+            player.y + player.height > p.y &&
+            player.y + player.height < p.y + p.height + player.vy) {
+            player.vy = -10;
+        }
+    });
+
+    drawPlatforms();
+    drawPlayer();
+
+    if (player.y > canvas.height) {
+        localStorage.setItem("coins", coins);
+        gameOver();
+        return;
+    }
+
+    requestAnimationFrame(loop);
+}
+
+document.addEventListener("keydown", e => {
+    if (e.key === "ArrowLeft") player.x -= 20;
+    if (e.key === "ArrowRight") player.x += 20;
+});
+
+canvas.addEventListener("touchstart", e => {
+    let x = e.touches[0].clientX;
+    if (x < canvas.width / 2) player.x -= 20;
+    else player.x += 20;
+});
+
+window.onload = () => {
+    menu.style.display = "flex";
+};
+</script>
 </body>
 </html>
+
 
