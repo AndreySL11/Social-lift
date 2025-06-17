@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Social Lift Jump — Улучшенная версия</title>
+<title>Social Lift Jump — Полная рабочая версия</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
   body, html {
@@ -17,7 +17,7 @@
   #gameCanvas {
     position: relative;
     z-index: 1;
-    pointer-events: none;
+    pointer-events: none; /* Клики проходят сквозь canvas */
     display: block;
     margin: 0 auto;
     background: transparent;
@@ -157,6 +157,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+  // Элементы
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
   const width = canvas.width;
@@ -182,6 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const ratingList = document.getElementById('ratingList');
   const closeRatingBtn = document.getElementById('closeRatingBtn');
 
+  // Игровые переменные
   let player = { x: width/2 - 18, y: height - 140, width: 36, height: 36, vy: 0, vx: 0, gravity: 0.35, jumpForce: -10, speedX: 0 };
   let platforms = [];
   const platformGap = 50;
@@ -245,8 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     draw(ctx) {
       if(!this.visible) return;
-      if(this.type === 'breaking') ctx.fillStyle = '#ff6600';
-      else ctx.fillStyle = '#00BFFF';
+      ctx.fillStyle = this.type === 'breaking' ? '#ff6600' : '#00BFFF';
       ctx.fillRect(this.x, this.y, this.w, this.h);
       if(this.coin && !this.coinCollected) {
         const cx = this.x + this.w/2;
@@ -268,7 +269,62 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Плавное ускорение влево/вправо
+  // Звёздный фон
+  const stars = [];
+  const starCount = 60;
+  for(let i=0; i<starCount; i++) {
+    stars.push({
+      x: Math.random()*width,
+      y: Math.random()*height,
+      r: Math.random()*1.5 + 0.5,
+      speed: (Math.random()*0.3)+0.05
+    });
+  }
+  function drawStars() {
+    ctx.fillStyle = '#fff';
+    stars.forEach(s => {
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fill();
+      s.y += s.speed;
+      if(s.y > height) s.y = 0;
+    });
+  }
+
+  // Пиксельная утка
+  function drawDuckPixeled(x, y, w, h) {
+    const scale = w / 8;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = '#FFD700';
+    ctx.fillRect(scale*1, scale*2, scale*6, scale*4); // тело
+    ctx.fillRect(scale*5, scale*0, scale*2, scale*2); // голова
+    ctx.fillStyle = '#000';
+    ctx.fillRect(scale*6, scale*1, scale*1, scale*1); // глаз
+    ctx.fillStyle = '#FFA500';
+    ctx.beginPath(); // клюв
+    ctx.moveTo(scale*7, scale*2);
+    ctx.lineTo(scale*8, scale*1.5);
+    ctx.lineTo(scale*7, scale*3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawPlayer() {
+    const skin = skins.find(s => s.id === selectedSkin);
+    if(skin && skin.img) {
+      if(!skin._img) {
+        skin._img = new Image();
+        skin._img.src = skin.img;
+      }
+      ctx.drawImage(skin._img, player.x, player.y, player.width, player.height);
+    } else {
+      drawDuckPixeled(player.x, player.y, player.width, player.height);
+    }
+  }
+
+  // Управление с плавным ускорением
   let leftPressed = false;
   let rightPressed = false;
   window.addEventListener('keydown', e => {
@@ -279,7 +335,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if(e.key === 'ArrowLeft') leftPressed = false;
     if(e.key === 'ArrowRight') rightPressed = false;
   });
-
   function handleKeyboardMovement() {
     const acceleration = 0.3;
     const maxSpeed = 5;
@@ -288,7 +343,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if(rightPressed) {
       player.speedX = Math.min(player.speedX + acceleration, maxSpeed);
     } else {
-      // Плавное замедление
       if(player.speedX > 0) player.speedX = Math.max(player.speedX - acceleration, 0);
       else if(player.speedX < 0) player.speedX = Math.min(player.speedX + acceleration, 0);
     }
@@ -316,7 +370,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updatePlatforms() {
     platforms.forEach(p => p.update());
-    // Удаляем невидимые платформы и создаём новые сверху для бесконечности
     platforms = platforms.filter(p => p.visible && p.y < height + 50);
     while(platforms.length < 15) {
       let minY = Math.min(...platforms.map(p => p.y));
@@ -369,36 +422,27 @@ document.addEventListener('DOMContentLoaded', () => {
     platforms.forEach(p => p.draw(ctx));
   }
 
-  function drawPlayer() {
-    const skin = skins.find(s => s.id === selectedSkin);
-    if(skin && skin.img) {
-      if(!skin._img) {
-        skin._img = new Image();
-        skin._img.src = skin.img;
-      }
-      ctx.drawImage(skin._img, player.x, player.y, player.width, player.height);
-    } else {
-      drawDuckPixeled(player.x, player.y, player.width, player.height);
-    }
-  }
+  function gameLoop() {
+    if(gameOver) return;
+    ctx.clearRect(0, 0, width, height);
+    drawStars();
+    handleKeyboardMovement();
+    updatePlayer();
+    updatePlatforms();
 
-  // Пиксельная утка — простой рисунок из квадратов
-  function drawDuckPixeled(x, y, w, h) {
-    const scale = w / 8;
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.fillStyle = '#FFD700';
-    // Тело
-    ctx.fillRect(scale*1, scale*2, scale*6, scale*4);
-    // Голова
-    ctx.fillRect(scale*5, scale*0, scale*2, scale*2);
-    // Глаз
-    ctx.fillStyle = '#000';
-    ctx.fillRect(scale*6, scale*1, scale*1, scale*1);
-    // Клюв
-    ctx.fillStyle = '#FFA500';
-    ctx.fillRect(scale*7, scale*2, scale*1, scale*1);
-    ctx.restore();
+    if(player.y < height/2) {
+      let diff = (height/2) - player.y;
+      player.y += diff;
+      platforms.forEach(p => p.y += diff);
+      scrollOffset += diff;
+      coinsCount = Math.max(0, Math.floor(scrollOffset/10));
+      scoreEl.textContent = coinsCount;
+    }
+
+    drawPlatforms();
+    drawPlayer();
+
+    requestAnimationFrame(gameLoop);
   }
 
   // Звёздный фон
@@ -421,29 +465,6 @@ document.addEventListener('DOMContentLoaded', () => {
       s.y += s.speed;
       if(s.y > height) s.y = 0;
     });
-  }
-
-  function gameLoop() {
-    if(gameOver) return;
-    ctx.clearRect(0, 0, width, height);
-    drawStars();
-    handleKeyboardMovement();
-    updatePlayer();
-    updatePlatforms();
-
-    if(player.y < height/2) {
-      let diff = (height/2) - player.y;
-      player.y += diff;
-      platforms.forEach(p => p.y += diff);
-      scrollOffset += diff;
-      coinsCount = Math.max(0, Math.floor(scrollOffset/10));
-      scoreEl.textContent = coinsCount;
-    }
-
-    drawPlatforms();
-    drawPlayer();
-
-    requestAnimationFrame(gameLoop);
   }
 
   function updateCoinsUI() {
@@ -479,31 +500,6 @@ document.addEventListener('DOMContentLoaded', () => {
     menu.classList.remove('active');
     gameOverScreen.classList.add('active');
     saveProgress();
-  }
-
-  // Управление стрелками
-  let leftPressed = false;
-  let rightPressed = false;
-  window.addEventListener('keydown', e => {
-    if(e.key === 'ArrowLeft') leftPressed = true;
-    if(e.key === 'ArrowRight') rightPressed = true;
-  });
-  window.addEventListener('keyup', e => {
-    if(e.key === 'ArrowLeft') leftPressed = false;
-    if(e.key === 'ArrowRight') rightPressed = false;
-  });
-  function handleKeyboardMovement() {
-    const acceleration = 0.3;
-    const maxSpeed = 5;
-    if(leftPressed) {
-      player.speedX = Math.max(player.speedX - acceleration, -maxSpeed);
-    } else if(rightPressed) {
-      player.speedX = Math.min(player.speedX + acceleration, maxSpeed);
-    } else {
-      if(player.speedX > 0) player.speedX = Math.max(player.speedX - acceleration, 0);
-      else if(player.speedX < 0) player.speedX = Math.min(player.speedX + acceleration, 0);
-    }
-    player.vx = player.speedX;
   }
 
   // Прыжок по тапу/клику
@@ -610,14 +606,23 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCoinsUI();
     renderShop();
   }
-
-  function updateCoinsUI() {
-    coinsEl.textContent = playerCoins;
-    shopCoinsEl.textContent = playerCoins;
+  function saveProgress() {
+    localStorage.setItem('playerCoins', playerCoins);
+    localStorage.setItem('ownedSkins', JSON.stringify(ownedSkins));
+    localStorage.setItem('selectedSkin', selectedSkin);
+    localStorage.setItem('playerBoosts', JSON.stringify(playerBoosts));
+    let localLeaderboard = JSON.parse(localStorage.getItem('localLeaderboard') || '[]');
+    localLeaderboard.push({name: 'Игрок', score: coinsCount});
+    localLeaderboard.sort((a,b) => b.score - a.score);
+    if(localLeaderboard.length > 10) localLeaderboard.length = 10;
+    localStorage.setItem('localLeaderboard', JSON.stringify(localLeaderboard));
   }
+
+  // Инициализация UI и кнопок
+  updateCoinsUI();
+  renderShop();
 });
 </script>
 </body>
 </html>
-
 
