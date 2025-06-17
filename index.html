@@ -65,6 +65,7 @@
     left: 50%;
     width: 320px;
     max-width: 95vw;
+    max-height: 80vh;
     padding: 20px;
     background: rgba(0,0,0,0.95);
     border-radius: 20px;
@@ -75,6 +76,7 @@
     user-select: none;
     z-index: 1050;
     display: none;
+    overflow-y: auto;
   }
   .screen.active {
     display: block;
@@ -147,7 +149,7 @@
 
 <div id="ratingScreen" class="screen">
   <h2>Рейтинг игроков</h2>
-  <div id="ratingList">Рейтинг доступен только локально</div>
+  <div id="ratingList">Рейтинг доступен локально</div>
   <button id="closeRatingBtn">Назад</button>
 </div>
 
@@ -264,9 +266,8 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('ownedSkins', JSON.stringify(ownedSkins));
     localStorage.setItem('selectedSkin', selectedSkin);
     localStorage.setItem('playerBoosts', JSON.stringify(playerBoosts));
-    // Локальный рейтинг
     let localLeaderboard = JSON.parse(localStorage.getItem('localLeaderboard') || '[]');
-    localLeaderboard.push({name: userName || 'Игрок', score: coinsCount});
+    localLeaderboard.push({name: tg.initDataUnsafe.user?.first_name || 'Игрок', score: coinsCount});
     localLeaderboard.sort((a,b) => b.score - a.score);
     if(localLeaderboard.length > 10) localLeaderboard.length = 10;
     localStorage.setItem('localLeaderboard', JSON.stringify(localLeaderboard));
@@ -277,7 +278,6 @@ document.addEventListener('DOMContentLoaded', () => {
     ownedSkins = JSON.parse(localStorage.getItem('ownedSkins') || '[0]');
     selectedSkin = parseInt(localStorage.getItem('selectedSkin') || '0');
     playerBoosts = JSON.parse(localStorage.getItem('playerBoosts') || '{"jump":0,"coin":0}');
-    // Открываем секретный скин при 100000 очков
     const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
     if(bestScore >= 100000 && !ownedSkins.includes(10)) {
       ownedSkins.push(10);
@@ -363,7 +363,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   openRatingBtn.addEventListener('click', () => {
-    // Локальный рейтинг
     const localLeaderboard = JSON.parse(localStorage.getItem('localLeaderboard') || '[]');
     if(localLeaderboard.length === 0) {
       ratingList.textContent = 'Рейтинг пуст';
@@ -389,7 +388,6 @@ document.addEventListener('DOMContentLoaded', () => {
     tg.MainButton.show();
   });
 
-  // Игровая логика и отрисовка
   function createPlatforms() {
     platforms = [];
     platforms.push(new Platform(width/2 - 50, height - 100, 100, 15, 'static'));
@@ -540,6 +538,5 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-
 
 
