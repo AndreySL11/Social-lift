@@ -39,6 +39,26 @@
     z-index: 1000;
     pointer-events: none;
   }
+  button {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    padding: 10px 20px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    background-color: #00bfff;
+    color: #000;
+    margin: 8px;
+    box-shadow: 0 0 20px #00bfffaa;
+    user-select: none;
+    pointer-events: auto;
+    transition: background-color 0.3s ease;
+    z-index: 1100;
+  }
+  button:hover {
+    background-color: #0099cc;
+  }
   .screen {
     position: fixed;
     top: 50%;
@@ -135,6 +155,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function() {
   // Firebase config - замените на свои данные
   const firebaseConfig = {
     apiKey: "YOUR_API_KEY",
@@ -488,8 +509,8 @@
           <div class="skin-preview" style="${bgStyle}"></div>
           <div>${skin.name} ${skin.id === 10 ? '(секретный)' : ''}</div>
           <div>
-            ${owned ? (selected ? '<b>Выбрано</b>' : `<button onclick="selectSkin(${skin.id})">Выбрать</button>`) 
-                    : (skin.id === 10 ? '<i>Доступен при 100000 очков</i>' : `<button onclick="buySkin(${skin.id})">Купить (${skin.price} SL)</button>`)}
+            ${owned ? (selected ? '<b>Выбрано</b>' : `<button data-id="${skin.id}">Выбрать</button>`) 
+                    : (skin.id === 10 ? '<i>Доступен при 100000 очков</i>' : `<button data-id="${skin.id}">Купить (${skin.price} SL)</button>`)}
           </div>
         </div>
       `;
@@ -498,28 +519,42 @@
       return `
         <div class="shop-item">
           <div>${b.name}<span class="boost-desc">${b.description}</span></div>
-          <div><button onclick="buyBooster('${b.id}')">Купить (${b.price} SL)</button></div>
+          <div><button data-id="${b.id}">Купить (${b.price} SL)</button></div>
         </div>
       `;
     }).join('');
   }
 
-  // Покупки
-  window.buySkin = function(id) {
+  // Покупки и выбор скинов/бустеров через делегирование
+  skinsList.addEventListener('click', e => {
+    if(e.target.tagName === 'BUTTON') {
+      const id = parseInt(e.target.getAttribute('data-id'));
+      if(e.target.textContent.includes('Купить')) buySkin(id);
+      else if(e.target.textContent.includes('Выбрать')) selectSkin(id);
+    }
+  });
+  boostersList.addEventListener('click', e => {
+    if(e.target.tagName === 'BUTTON') {
+      const id = e.target.getAttribute('data-id');
+      buyBooster(id);
+    }
+  });
+
+  function buySkin(id) {
     const skin = skins.find(s => s.id === id);
     if(playerCoins < skin.price) return alert('Недостаточно монет!');
     playerCoins -= skin.price;
-    ownedSkins.push(id);
+    if(!ownedSkins.includes(id)) ownedSkins.push(id);
     saveProgress();
     updateCoinsUI();
     renderShop();
   }
-  window.selectSkin = function(id) {
+  function selectSkin(id) {
     selectedSkin = id;
     saveProgress();
     renderShop();
   }
-  window.buyBooster = function(id) {
+  function buyBooster(id) {
     const booster = boosters.find(b => b.id === id);
     if(playerCoins < booster.price) return alert('Недостаточно монет!');
     playerCoins -= booster.price;
@@ -529,41 +564,33 @@
     renderShop();
   }
 
-  // Рейтинг
-  function updateLeaderboardUI() {
-    if(leaderboard.length === 0) {
-      ratingList.textContent = 'Рейтинг пуст';
-      return;
-    }
-    ratingList.innerHTML = leaderboard.map((u,i) =>
-      `<b>${i+1}.</b> ${u.nickname ? '@'+u.nickname : u.username} <span style="float:right">${u.score} м</span>`
-    ).join('<br>');
-  }
-
-  // Кнопки
-  restartGameBtn.onclick = () => {
-    startGame();
-    tg.MainButton.hide();
-  };
-  goToMenuBtn1.onclick = () => {
-    gameOverScreen.classList.remove('active');
-    menu.classList.add('active');
-    tg.MainButton.show();
-  };
-  openShopBtn.onclick = () => {
+  // Кнопки меню
+  openShopBtn.addEventListener('click', () => {
     renderShop();
     shopScreen.classList.add('active');
-  };
-  closeShopBtn.onclick = () => shopScreen.classList.remove('active');
-  openRatingBtn.onclick = () => {
+  });
+  closeShopBtn.addEventListener('click', () => {
+    shopScreen.classList.remove('active');
+  });
+  openRatingBtn.addEventListener('click', () => {
     db.ref('leaderboard').orderByChild('score').limitToLast(10).once('value').then(snapshot => {
       leaderboard = [];
       snapshot.forEach(child => leaderboard.unshift(child.val()));
       updateLeaderboardUI();
       ratingScreen.classList.add('active');
     });
-  };
-  closeRatingBtn.onclick = () => ratingScreen.classList.remove('active');
+  });
+  closeRatingBtn.addEventListener('click', () => {
+    ratingScreen.classList.remove('active');
+  });
+  restartGameBtn.addEventListener('click', () => {
+    startGame();
+  });
+  goToMenuBtn1.addEventListener('click', () => {
+    gameOverScreen.classList.remove('active');
+    menu.classList.add('active');
+    tg.MainButton.show();
+  });
 
   // Инициализация
   loadProgress();
@@ -572,7 +599,6 @@
 </script>
 </body>
 </html>
-
 
 
 
