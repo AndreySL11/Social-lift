@@ -147,44 +147,16 @@
 
 <div id="ratingScreen" class="screen">
   <h2>Рейтинг игроков</h2>
-  <div id="ratingList">Загрузка...</div>
+  <div id="ratingList">Рейтинг доступен только локально</div>
   <button id="closeRatingBtn">Назад</button>
 </div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // Firebase config - замените на свои данные
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    databaseURL: "YOUR_DB_URL",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_BUCKET",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-
-  // Telegram WebApp API
   const tg = window.Telegram.WebApp;
   tg.expand();
-  const userId = tg.initDataUnsafe.user?.id || Math.floor(Math.random()*1e9);
-  const userName = tg.initDataUnsafe.user?.first_name || 'Гость';
-  const userNick = tg.initDataUnsafe.user?.username || '';
 
-  // Telegram MainButton для запуска игры
-  tg.MainButton.text = "Начать игру";
-  tg.MainButton.show();
-  tg.MainButton.onClick(() => {
-    startGame();
-    tg.MainButton.hide();
-  });
-
-  // DOM элементы
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
   const width = canvas.width;
@@ -209,24 +181,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const ratingList = document.getElementById('ratingList');
   const closeRatingBtn = document.getElementById('closeRatingBtn');
 
-  // Игровые переменные
   let player = { x: width/2 - 18, y: height - 140, width: 36, height: 36, vy: 0, vx: 0, gravity: 0.35, jumpForce: -10, skinId: 0 };
   let platforms = [];
   const platformGap = 50;
   let scrollOffset = 0;
   let gameOver = false;
   let coinsCount = 0;
-  let moveDir = 0;
   const speedX = 4;
 
-  // Прогресс игрока
   let playerCoins = 0;
   let ownedSkins = [0];
   let selectedSkin = 0;
   let playerBoosts = { jump: 0, coin: 0 };
   let leaderboard = [];
 
-  // Скины
   const skins = [
     { id: 0, name: 'Голубой', price: 0, color: '#00BFFF', img: null },
     { id: 1, name: 'Белый', price: 100, color: '#FFFFFF', img: null },
@@ -241,13 +209,11 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 10, name: 'Секретный', price: 0, color: '#FFD700', img: 'https://i.imgur.com/secretSkin.png' }
   ];
 
-  // Усилители
   const boosters = [
     { id: 'jump', name: 'Прыжок +2', price: 150, description: 'Увеличивает силу прыжка на 2' },
     { id: 'coin', name: 'Монеты x2', price: 200, description: 'Удваивает сбор монет' }
   ];
 
-  // Класс платформы
   class Platform {
     constructor(x, y, w, h, type='static') {
       this.x = x;
@@ -293,60 +259,137 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Загрузка прогресса
-  function loadProgress() {
-    const coinsLS = localStorage.getItem('playerCoins');
-    if(coinsLS) playerCoins = parseInt(coinsLS);
-    const ownedSkinsLS = localStorage.getItem('ownedSkins');
-    if(ownedSkinsLS) ownedSkins = JSON.parse(ownedSkinsLS);
-    const selectedSkinLS = localStorage.getItem('selectedSkin');
-    if(selectedSkinLS) selectedSkin = parseInt(selectedSkinLS);
-    const boostsLS = localStorage.getItem('playerBoosts');
-    if(boostsLS) playerBoosts = JSON.parse(boostsLS);
-
-    if(parseInt(localStorage.getItem('bestScore') || '0') >= 100000 && !ownedSkins.includes(10)) {
-      ownedSkins.push(10);
-      alert('Поздравляем! Вы открыли секретный скин!');
-    }
-
-    db.ref('leaderboard').orderByChild('score').limitToLast(10).once('value').then(snapshot => {
-      leaderboard = [];
-      snapshot.forEach(child => leaderboard.unshift(child.val()));
-      updateLeaderboardUI();
-    });
-  }
-
-  // Сохранение прогресса
   function saveProgress() {
     localStorage.setItem('playerCoins', playerCoins);
     localStorage.setItem('ownedSkins', JSON.stringify(ownedSkins));
     localStorage.setItem('selectedSkin', selectedSkin);
     localStorage.setItem('playerBoosts', JSON.stringify(playerBoosts));
+    // Локальный рейтинг
+    let localLeaderboard = JSON.parse(localStorage.getItem('localLeaderboard') || '[]');
+    localLeaderboard.push({name: userName || 'Игрок', score: coinsCount});
+    localLeaderboard.sort((a,b) => b.score - a.score);
+    if(localLeaderboard.length > 10) localLeaderboard.length = 10;
+    localStorage.setItem('localLeaderboard', JSON.stringify(localLeaderboard));
   }
 
-  // Сохранение результата в Firebase
-  function submitScore(score) {
+  function loadProgress() {
+    playerCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+    ownedSkins = JSON.parse(localStorage.getItem('ownedSkins') || '[0]');
+    selectedSkin = parseInt(localStorage.getItem('selectedSkin') || '0');
+    playerBoosts = JSON.parse(localStorage.getItem('playerBoosts') || '{"jump":0,"coin":0}');
+    // Открываем секретный скин при 100000 очков
     const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
-    if(score > bestScore) localStorage.setItem('bestScore', score);
-    db.ref('leaderboard/' + userId).set({
-      username: userName,
-      nickname: userNick,
-      score: score
-    });
-  }
-
-  // Обновление рейтинга UI
-  function updateLeaderboardUI() {
-    if(leaderboard.length === 0) {
-      ratingList.textContent = 'Рейтинг пуст';
-      return;
+    if(bestScore >= 100000 && !ownedSkins.includes(10)) {
+      ownedSkins.push(10);
+      alert('Поздравляем! Вы открыли секретный скин!');
     }
-    ratingList.innerHTML = leaderboard.map((u,i) =>
-      `<b>${i+1}.</b> ${u.nickname ? '@'+u.nickname : u.username} <span style="float:right">${u.score} м</span>`
-    ).join('<br>');
   }
 
-  // Создание платформ
+  function renderShop() {
+    shopCoinsEl.textContent = playerCoins;
+    skinsList.innerHTML = skins.map(skin => {
+      const owned = ownedSkins.includes(skin.id);
+      const selected = selectedSkin === skin.id;
+      const bgStyle = skin.img ? `background-image:url(${skin.img});` : `background-color:${skin.color};`;
+      return `
+        <div class="shop-item">
+          <div class="skin-preview" style="${bgStyle}"></div>
+          <div>${skin.name} ${skin.id === 10 ? '(секретный)' : ''}</div>
+          <div>
+            ${owned ? (selected ? '<b>Выбрано</b>' : `<button data-id="${skin.id}">Выбрать</button>`) 
+                    : (skin.id === 10 ? '<i>Доступен при 100000 очков</i>' : `<button data-id="${skin.id}">Купить (${skin.price} SL)</button>`)}
+          </div>
+        </div>
+      `;
+    }).join('');
+    boostersList.innerHTML = boosters.map(b => {
+      return `
+        <div class="shop-item">
+          <div>${b.name}<span class="boost-desc">${b.description}</span></div>
+          <div><button data-id="${b.id}">Купить (${b.price} SL)</button></div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  skinsList.addEventListener('click', e => {
+    if(e.target.tagName === 'BUTTON') {
+      const id = parseInt(e.target.getAttribute('data-id'));
+      if(e.target.textContent.includes('Купить')) buySkin(id);
+      else if(e.target.textContent.includes('Выбрать')) selectSkin(id);
+    }
+  });
+
+  boostersList.addEventListener('click', e => {
+    if(e.target.tagName === 'BUTTON') {
+      const id = e.target.getAttribute('data-id');
+      buyBooster(id);
+    }
+  });
+
+  function buySkin(id) {
+    const skin = skins.find(s => s.id === id);
+    if(playerCoins < skin.price) return alert('Недостаточно монет!');
+    playerCoins -= skin.price;
+    if(!ownedSkins.includes(id)) ownedSkins.push(id);
+    saveProgress();
+    updateCoinsUI();
+    renderShop();
+  }
+
+  function selectSkin(id) {
+    selectedSkin = id;
+    saveProgress();
+    renderShop();
+  }
+
+  function buyBooster(id) {
+    const booster = boosters.find(b => b.id === id);
+    if(playerCoins < booster.price) return alert('Недостаточно монет!');
+    playerCoins -= booster.price;
+    playerBoosts[id] = (playerBoosts[id] || 0) + 1;
+    saveProgress();
+    updateCoinsUI();
+    renderShop();
+  }
+
+  openShopBtn.addEventListener('click', () => {
+    renderShop();
+    shopScreen.classList.add('active');
+  });
+
+  closeShopBtn.addEventListener('click', () => {
+    shopScreen.classList.remove('active');
+  });
+
+  openRatingBtn.addEventListener('click', () => {
+    // Локальный рейтинг
+    const localLeaderboard = JSON.parse(localStorage.getItem('localLeaderboard') || '[]');
+    if(localLeaderboard.length === 0) {
+      ratingList.textContent = 'Рейтинг пуст';
+    } else {
+      ratingList.innerHTML = localLeaderboard.map((u,i) =>
+        `<b>${i+1}.</b> ${u.name} <span style="float:right">${u.score} м</span>`
+      ).join('<br>');
+    }
+    ratingScreen.classList.add('active');
+  });
+
+  closeRatingBtn.addEventListener('click', () => {
+    ratingScreen.classList.remove('active');
+  });
+
+  restartGameBtn.addEventListener('click', () => {
+    startGame();
+  });
+
+  goToMenuBtn1.addEventListener('click', () => {
+    gameOverScreen.classList.remove('active');
+    menu.classList.add('active');
+    tg.MainButton.show();
+  });
+
+  // Игровая логика и отрисовка
   function createPlatforms() {
     platforms = [];
     platforms.push(new Platform(width/2 - 50, height - 100, 100, 15, 'static'));
@@ -359,7 +402,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Отрисовка игрока
   function drawPlayer() {
     const skin = skins.find(s => s.id === selectedSkin);
     if(skin && skin.img) {
@@ -374,7 +416,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Обновление игрока
   function updatePlayer() {
     player.vy += player.gravity;
     player.y += player.vy;
@@ -411,21 +452,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Обновление платформ
   function updatePlatforms() {
     for(let plat of platforms) {
       plat.update();
     }
   }
 
-  // Отрисовка платформ
   function drawPlatforms() {
     for(let plat of platforms) {
       plat.draw(ctx);
     }
   }
 
-  // Игровой цикл
   function gameLoop() {
     if(gameOver) return;
     ctx.clearRect(0, 0, width, height);
@@ -449,13 +487,11 @@ document.addEventListener('DOMContentLoaded', () => {
     requestAnimationFrame(gameLoop);
   }
 
-  // Обновление UI монет
   function updateCoinsUI() {
     coinsEl.textContent = playerCoins;
     shopCoinsEl.textContent = playerCoins;
   }
 
-  // Начало игры
   function startGame() {
     gameOver = false;
     scrollOffset = 0;
@@ -477,13 +513,12 @@ document.addEventListener('DOMContentLoaded', () => {
     requestAnimationFrame(gameLoop);
   }
 
-  // Конец игры
   function endGame() {
     finalScoreEl.textContent = coinsCount;
     finalCoinsEl.textContent = coinsCount;
     menu.classList.remove('active');
     gameOverScreen.classList.add('active');
-    submitScore(coinsCount);
+    saveProgress();
   }
 
   // Прыжок по тапу
@@ -497,101 +532,6 @@ document.addEventListener('DOMContentLoaded', () => {
     player.vy = player.jumpForce - (playerBoosts.jump || 0);
   }, { passive: false });
 
-  // Магазин
-  function renderShop() {
-    shopCoinsEl.textContent = playerCoins;
-    skinsList.innerHTML = skins.map(skin => {
-      const owned = ownedSkins.includes(skin.id);
-      const selected = selectedSkin === skin.id;
-      const bgStyle = skin.img ? `background-image:url(${skin.img});` : `background-color:${skin.color};`;
-      return `
-        <div class="shop-item">
-          <div class="skin-preview" style="${bgStyle}"></div>
-          <div>${skin.name} ${skin.id === 10 ? '(секретный)' : ''}</div>
-          <div>
-            ${owned ? (selected ? '<b>Выбрано</b>' : `<button data-id="${skin.id}">Выбрать</button>`) 
-                    : (skin.id === 10 ? '<i>Доступен при 100000 очков</i>' : `<button data-id="${skin.id}">Купить (${skin.price} SL)</button>`)}
-          </div>
-        </div>
-      `;
-    }).join('');
-    boostersList.innerHTML = boosters.map(b => {
-      return `
-        <div class="shop-item">
-          <div>${b.name}<span class="boost-desc">${b.description}</span></div>
-          <div><button data-id="${b.id}">Купить (${b.price} SL)</button></div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  // Делегирование событий для магазина
-  skinsList.addEventListener('click', e => {
-    if(e.target.tagName === 'BUTTON') {
-      const id = parseInt(e.target.getAttribute('data-id'));
-      if(e.target.textContent.includes('Купить')) buySkin(id);
-      else if(e.target.textContent.includes('Выбрать')) selectSkin(id);
-    }
-  });
-  boostersList.addEventListener('click', e => {
-    if(e.target.tagName === 'BUTTON') {
-      const id = e.target.getAttribute('data-id');
-      buyBooster(id);
-    }
-  });
-
-  function buySkin(id) {
-    const skin = skins.find(s => s.id === id);
-    if(playerCoins < skin.price) return alert('Недостаточно монет!');
-    playerCoins -= skin.price;
-    if(!ownedSkins.includes(id)) ownedSkins.push(id);
-    saveProgress();
-    updateCoinsUI();
-    renderShop();
-  }
-  function selectSkin(id) {
-    selectedSkin = id;
-    saveProgress();
-    renderShop();
-  }
-  function buyBooster(id) {
-    const booster = boosters.find(b => b.id === id);
-    if(playerCoins < booster.price) return alert('Недостаточно монет!');
-    playerCoins -= booster.price;
-    playerBoosts[id] = (playerBoosts[id] || 0) + 1;
-    saveProgress();
-    updateCoinsUI();
-    renderShop();
-  }
-
-  // Кнопки меню
-  openShopBtn.addEventListener('click', () => {
-    renderShop();
-    shopScreen.classList.add('active');
-  });
-  closeShopBtn.addEventListener('click', () => {
-    shopScreen.classList.remove('active');
-  });
-  openRatingBtn.addEventListener('click', () => {
-    db.ref('leaderboard').orderByChild('score').limitToLast(10).once('value').then(snapshot => {
-      leaderboard = [];
-      snapshot.forEach(child => leaderboard.unshift(child.val()));
-      updateLeaderboardUI();
-      ratingScreen.classList.add('active');
-    });
-  });
-  closeRatingBtn.addEventListener('click', () => {
-    ratingScreen.classList.remove('active');
-  });
-  restartGameBtn.addEventListener('click', () => {
-    startGame();
-  });
-  goToMenuBtn1.addEventListener('click', () => {
-    gameOverScreen.classList.remove('active');
-    menu.classList.add('active');
-    tg.MainButton.show();
-  });
-
   // Инициализация
   loadProgress();
   renderShop();
@@ -600,5 +540,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
