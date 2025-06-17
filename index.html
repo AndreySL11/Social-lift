@@ -3,162 +3,121 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Social Lift Jump — Social Lift</title>
+<title>Social Lift Jump</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
-  body, html {
-    margin: 0; padding: 0; height: 100%;
-    background: #000;
-    font-family: 'Montserrat', sans-serif;
-    overflow: hidden;
-    color: #fff;
-    user-select: none;
-  }
-  #gameCanvas {
-    display: block;
-    margin: 0 auto;
-    background: #000;
-    border-radius: 16px;
-    box-shadow: 0 0 30px #00bfff;
-    touch-action: none;
-    max-width: 100vw;
-    max-height: 80vh;
-    position: relative;
-    z-index: 1;
-  }
-  #ui {
-    position: fixed;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 320px;
-    display: flex;
-    justify-content: space-between;
-    font-size: 20px;
-    font-weight: 700;
-    z-index: 1000;
-    pointer-events: none;
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: white;
+    text-align: center;
   }
   .screen {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    width: 320px;
-    max-width: 95vw;
-    max-height: 80vh;
-    padding: 20px;
-    background: rgba(0,0,0,0.95);
-    border-radius: 20px;
-    box-shadow: 0 0 40px #00bfffcc;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    color: #fff;
-    user-select: none;
-    z-index: 1050;
     display: none;
-    overflow-y: auto;
-    pointer-events: auto;
+    padding: 20px;
   }
   .screen.active {
     display: block;
   }
   button {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 700;
-    font-size: 18px;
-    padding: 10px 20px;
-    border-radius: 12px;
+    background: #00BFFF;
     border: none;
-    cursor: pointer;
-    background-color: #00bfff;
-    color: #000;
+    color: white;
+    padding: 12px 24px;
     margin: 8px;
-    box-shadow: 0 0 20px #00bfffaa;
-    user-select: none;
-    pointer-events: auto;
-    transition: background-color 0.3s ease;
-    -webkit-user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-    z-index: 1100;
+    font-size: 18px;
+    cursor: pointer;
+    border-radius: 5px;
   }
   button:hover {
-    background-color: #0099cc;
+    background: #0099cc;
   }
-  .shop-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 8px 0;
-    border-bottom: 1px solid #00bfff44;
-    padding-bottom: 8px;
+  #gameScreen {
+    max-width: 400px;
+    margin: 0 auto;
   }
-  .skin-preview {
-    width: 40px;
-    height: 40px;
+  canvas {
+    background: linear-gradient(to top, #001F3F, #00BFFF);
     border-radius: 10px;
-    margin-right: 12px;
-    background-size: cover;
-    background-position: center;
-    border: 2px solid #00BFFF;
-    flex-shrink: 0;
+    display: block;
+    margin: 0 auto;
+    box-shadow: 0 0 20px #00bfffaa;
   }
-  .boost-desc {
-    font-size: 13px;
-    color: #00BFFF;
-    margin-left: 8px;
-  }
-  #ratingList {
-    max-height: 200px;
-    overflow-y: auto;
-    text-align: left;
+  #gameInfo {
     margin-top: 10px;
-    font-size: 16px;
+    font-size: 20px;
+  }
+  #gameOverMessage {
+    font-size: 24px;
+    margin-top: 20px;
+    color: #ff4444;
   }
 </style>
 </head>
 <body>
 
-<canvas id="gameCanvas" width="320" height="480"></canvas>
-
-<div id="ui">
-  <div>Высота: <span id="score">0</span> м</div>
-  <div>Монеты SL: <span id="coins">0</span></div>
-</div>
-
+<!-- Главное меню -->
 <div id="menu" class="screen active">
-  <h2>Social Lift Jump</h2>
-  <button id="startGameBtn">Начать игру</button>
-  <button id="openShopBtn">Магазин</button>
-  <button id="openRatingBtn">Рейтинг</button>
+  <h1>Social Lift Jump</h1>
+  <button id="playBtn">Играть</button>
+  <button id="shopBtn">Магазин</button>
+  <button id="ratingBtn">Рейтинг</button>
 </div>
 
-<div id="gameOverScreen" class="screen">
-  <h2>Игра окончена</h2>
-  <p>Ваш результат: <span id="finalScore">0</span> м</p>
-  <p>Монеты: <span id="finalCoins">0</span></p>
-  <button id="restartGameBtn">Начать заново</button>
-  <button id="goToMenuBtn1">В меню</button>
-</div>
-
+<!-- Магазин -->
 <div id="shopScreen" class="screen">
-  <h2>Магазин</h2>
-  <div>Монеты: <span id="shopCoins">0</span></div>
-  <h3>Скины</h3>
-  <div id="skinsList"></div>
-  <h3>Усилители</h3>
-  <div id="boostersList"></div>
-  <button id="closeShopBtn">Назад</button>
+  <h2>Магазин (пока пусто)</h2>
+  <button id="backFromShopBtn">Назад</button>
 </div>
 
+<!-- Рейтинг -->
 <div id="ratingScreen" class="screen">
-  <h2>Рейтинг игроков</h2>
-  <div id="ratingList">Рейтинг доступен локально</div>
-  <button id="closeRatingBtn">Назад</button>
+  <h2>Рейтинг (пока пусто)</h2>
+  <button id="backFromRatingBtn">Назад</button>
+</div>
+
+<!-- Экран игры -->
+<div id="gameScreen" class="screen">
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <div id="gameInfo">
+    Высота: <span id="score">0</span> м &nbsp;&nbsp; Монеты: <span id="coins">0</span>
+  </div>
+  <div id="gameOverMessage" style="display:none;">
+    Игра окончена!<br />
+    <button id="restartBtn">Перезапустить</button>
+    <button id="exitBtn">Выйти в меню</button>
+  </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+  // Навигация по экранам
+  const menu = document.getElementById('menu');
+  const shopScreen = document.getElementById('shopScreen');
+  const ratingScreen = document.getElementById('ratingScreen');
+  const gameScreen = document.getElementById('gameScreen');
+
+  function showScreen(screen) {
+    [menu, shopScreen, ratingScreen, gameScreen].forEach(s => s.classList.remove('active'));
+    if(screen) screen.classList.add('active');
+  }
+
+  document.getElementById('playBtn').onclick = () => {
+    startGame();
+  };
+  document.getElementById('shopBtn').onclick = () => {
+    showScreen(shopScreen);
+  };
+  document.getElementById('ratingBtn').onclick = () => {
+    showScreen(ratingScreen);
+  };
+  document.getElementById('backFromShopBtn').onclick = () => {
+    showScreen(menu);
+  };
+  document.getElementById('backFromRatingBtn').onclick = () => {
+    showScreen(menu);
+  };
+
+  // Игра
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
   const width = canvas.width;
@@ -166,200 +125,168 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const scoreEl = document.getElementById('score');
   const coinsEl = document.getElementById('coins');
-  const menu = document.getElementById('menu');
-  const startGameBtn = document.getElementById('startGameBtn');
-  const openShopBtn = document.getElementById('openShopBtn');
-  const openRatingBtn = document.getElementById('openRatingBtn');
-  const gameOverScreen = document.getElementById('gameOverScreen');
-  const finalScoreEl = document.getElementById('finalScore');
-  const finalCoinsEl = document.getElementById('finalCoins');
-  const restartGameBtn = document.getElementById('restartGameBtn');
-  const goToMenuBtn1 = document.getElementById('goToMenuBtn1');
-  const shopScreen = document.getElementById('shopScreen');
-  const skinsList = document.getElementById('skinsList');
-  const boostersList = document.getElementById('boostersList');
-  const shopCoinsEl = document.getElementById('shopCoins');
-  const closeShopBtn = document.getElementById('closeShopBtn');
-  const ratingScreen = document.getElementById('ratingScreen');
-  const ratingList = document.getElementById('ratingList');
-  const closeRatingBtn = document.getElementById('closeRatingBtn');
+  const gameOverMessage = document.getElementById('gameOverMessage');
 
-  // --- Переменные игры ---
-  let player = { x: width/2 - 18, y: height - 140, width: 36, height: 36, vy: 0, vx: 0, gravity: 0.35, jumpForce: -10 };
+  const restartBtn = document.getElementById('restartBtn');
+  const exitBtn = document.getElementById('exitBtn');
+
+  // Игрок
+  const player = {
+    x: width / 2 - 20,
+    y: height - 140,
+    width: 40,
+    height: 40,
+    vy: 0,
+    vx: 0,
+    color: '#FFD700',
+    jumpPower: 14,
+    gravity: 0.6
+  };
+
+  // Платформы
   let platforms = [];
-  const platformGap = 50;
+  const platformWidth = 80;
+  const platformHeight = 15;
+
+  // Игра
   let scrollOffset = 0;
-  let gameOver = false;
   let coinsCount = 0;
-  let playerCoins = parseInt(localStorage.getItem('playerCoins')) || 0;
-  let ownedSkins = JSON.parse(localStorage.getItem('ownedSkins') || '[0]');
-  let selectedSkin = parseInt(localStorage.getItem('selectedSkin') || '0');
-  let playerBoosts = JSON.parse(localStorage.getItem('playerBoosts') || '{"jump":0,"coin":0}');
+  let gameOver = false;
 
-  // --- Скины ---
-  const skins = [
-    { id: 0, name: 'Голубой', price: 0, color: '#00BFFF', img: null },
-    { id: 1, name: 'Белый', price: 100, color: '#FFFFFF', img: null },
-    { id: 2, name: 'Черный', price: 150, color: '#000000', img: null },
-    { id: 3, name: 'Красный', price: 200, color: '#FF0000', img: null },
-    { id: 4, name: 'Зелёный', price: 250, color: '#00FF00', img: null },
-    { id: 5, name: 'Оранжевый', price: 300, color: '#FFA500', img: null },
-    { id: 6, name: 'Розовый', price: 350, color: '#FFC0CB', img: null },
-    { id: 7, name: 'Фиолетовый', price: 400, color: '#800080', img: null },
-    { id: 8, name: 'Утка', price: 500, color: '#00BFFF', img: 'https://i.imgur.com/7yUvePI.png' }, // пример с картинкой
-  ];
-
-  // --- Усилители ---
-  const boosters = [
-    { id: 'jump', name: 'Сила прыжка +1', price: 200, desc: 'Увеличивает высоту прыжка', amount: 0 },
-    { id: 'coin', name: 'Монеты x2', price: 300, desc: 'Удваивает количество собираемых монет', amount: 0 },
-  ];
-
-  // --- Инициализация ---
+  // Создание платформ
   function initPlatforms() {
     platforms = [];
-    let y = height - 20;
-    for (let i = 0; i < 20; i++) {
-      platforms.push({
-        x: Math.random() * (width - 80),
-        y: y,
-        width: 80,
-        height: 12,
-        type: 'normal',
-      });
-      y -= platformGap;
+    // Начальная платформа
+    platforms.push({x: width/2 - platformWidth/2, y: height - 100, width: platformWidth, height: platformHeight, coin: false});
+    for(let i = 1; i < 10; i++) {
+      const x = Math.random() * (width - platformWidth);
+      const y = height - 100 - i * 60;
+      platforms.push({x, y, width: platformWidth, height: platformHeight, coin: Math.random() < 0.3});
     }
   }
 
-  function drawPlayer() {
-    ctx.fillStyle = skins[selectedSkin]?.color || '#00BFFF';
-    if(skins[selectedSkin]?.img){
-      let img = new Image();
-      img.src = skins[selectedSkin].img;
-      ctx.drawImage(img, player.x, player.y, player.width, player.height);
-    } else {
-      ctx.fillRect(player.x, player.y, player.width, player.height);
-    }
-  }
-
-  function drawPlatforms() {
-    ctx.fillStyle = '#00bfff';
+  // Проверка столкновений с платформами
+  function checkPlatformCollision() {
     platforms.forEach(p => {
-      ctx.fillRect(p.x, p.y, p.width, p.height);
-    });
-  }
-
-  function drawCoins() {
-    ctx.fillStyle = '#FFD700';
-    platforms.forEach(p => {
-      if(p.coin) {
-        ctx.beginPath();
-        ctx.arc(p.x + p.width/2, p.y - 10, 6, 0, Math.PI*2);
-        ctx.fill();
+      if(
+        player.vy > 0 && // падаем вниз
+        player.x + player.width > p.x &&
+        player.x < p.x + p.width &&
+        player.y + player.height >= p.y &&
+        player.y + player.height <= p.y + p.height
+      ) {
+        player.vy = -player.jumpPower;
       }
     });
   }
 
+  // Проверка сбора монет
+  function checkCoins() {
+    platforms.forEach(p => {
+      if(p.coin){
+        // монета - круг посередине платформы
+        const coinX = p.x + p.width / 2;
+        const coinY = p.y - 10;
+        const distX = (player.x + player.width/2) - coinX;
+        const distY = (player.y + player.height/2) - coinY;
+        const dist = Math.sqrt(distX * distX + distY * distY);
+        if(dist < 20){
+          coinsCount++;
+          p.coin = false;
+          coinsEl.textContent = coinsCount;
+        }
+      }
+    });
+  }
+
+  // Обновление позиции игрока и платформ
   function update() {
-    if(gameOver) return;
-    // Обновляем игрока
     player.vy += player.gravity;
     player.y += player.vy;
     player.x += player.vx;
 
-    if(player.x < 0) player.x = 0;
-    if(player.x + player.width > width) player.x = width - player.width;
+    // Горизонтальный перенос (при выходе за границы экрана)
+    if(player.x + player.width < 0) player.x = width;
+    else if(player.x > width) player.x = -player.width;
 
-    // Проверяем платформы
-    platforms.forEach(p => {
-      if(
-        player.vy > 0 &&
-        player.x + player.width > p.x &&
-        player.x < p.x + p.width &&
-        player.y + player.height > p.y &&
-        player.y + player.height < p.y + p.height + player.vy
-      ) {
-        player.y = p.y - player.height;
-        player.vy = player.jumpForce - (playerBoosts.jump || 0);
-      }
-      // Проверка на монеты
-      if(p.coin && player.x + player.width > p.x && player.x < p.x + p.width && player.y + player.height > p.y - 20 && player.y < p.y) {
-        coinsCount += 1 * ((playerBoosts.coin && playerBoosts.coin > 0) ? 2 : 1);
-        p.coin = false;
-      }
-    });
+    checkPlatformCollision();
+    checkCoins();
 
-    // Скроллим платформы и игрока вверх, если прыгнули выше середины
-    if(player.y < height/2) {
-      const diff = height/2 - player.y;
-      player.y = height/2;
+    // Скроллим платформы, если игрок поднимается выше 1/3 высоты
+    if(player.y < height / 3){
+      const diff = (height / 3) - player.y;
+      player.y = height / 3;
+      scrollOffset += diff;
       platforms.forEach(p => {
         p.y += diff;
-        if(p.y > height) {
-          p.y = 0;
-          p.x = Math.random() * (width - 80);
-          p.coin = Math.random() < 0.3; // вероятность монеты
-        }
       });
-      scrollOffset += diff;
+
+      // Удаляем платформы, вышедшие за низ и добавляем новые сверху
+      platforms = platforms.filter(p => p.y < height + 50);
+      while(platforms.length < 10){
+        const lastY = platforms.reduce((min, p) => Math.min(min, p.y), height);
+        const x = Math.random() * (width - platformWidth);
+        const y = lastY - 60;
+        platforms.push({x, y, width: platformWidth, height: platformHeight, coin: Math.random() < 0.3});
+      }
     }
 
-    // Проверяем падение ниже экрана - конец игры
-    if(player.y > height) {
-      endGame();
+    // Игра заканчивается, если игрок упал вниз
+    if(player.y > height){
+      gameOver = true;
+      showGameOver();
     }
 
     scoreEl.textContent = Math.floor(scrollOffset);
-    coinsEl.textContent = playerCoins + coinsCount;
   }
 
-  function draw() {
+  function showGameOver(){
+    gameOverMessage.style.display = 'block';
+  }
+  function hideGameOver(){
+    gameOverMessage.style.display = 'none';
+  }
+
+  // Рисуем игрока
+  function drawPlayer() {
+    ctx.fillStyle = player.color;
+    ctx.fillRect(player.x, player.y, player.width, player.height);
+  }
+
+  // Рисуем платформы и монеты
+  function drawPlatforms() {
+    platforms.forEach(p => {
+      // Платформа
+      ctx.fillStyle = '#654321';
+      ctx.fillRect(p.x, p.y, p.width, p.height);
+
+      // Монета
+      if(p.coin){
+        ctx.beginPath();
+        ctx.fillStyle = 'gold';
+        ctx.arc(p.x + p.width / 2, p.y - 10, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'orange';
+        ctx.stroke();
+      }
+    });
+  }
+
+  // Игровой цикл
+  function gameLoop(){
+    if(gameOver) return;
+
     ctx.clearRect(0, 0, width, height);
-    drawPlatforms();
-    drawCoins();
-    drawPlayer();
-  }
 
-  function gameLoop() {
     update();
-    draw();
-    if(!gameOver) requestAnimationFrame(gameLoop);
+    drawPlatforms();
+    drawPlayer();
+
+    requestAnimationFrame(gameLoop);
   }
 
-  // Управление
-  window.addEventListener('keydown', e => {
-    if(e.key === 'ArrowLeft' || e.key === 'a') player.vx = -5;
-    if(e.key === 'ArrowRight' || e.key === 'd') player.vx = 5;
-  });
-  window.addEventListener('keyup', e => {
-    if(e.key === 'ArrowLeft' || e.key === 'a') player.vx = 0;
-    if(e.key === 'ArrowRight' || e.key === 'd') player.vx = 0;
-  });
-
-  // Мобильное управление
-  let touchStartX = null;
-  canvas.addEventListener('touchstart', e => {
-    touchStartX = e.touches[0].clientX;
-  });
-  canvas.addEventListener('touchmove', e => {
-    if(touchStartX === null) return;
-    let dx = e.touches[0].clientX - touchStartX;
-    if(dx > 10) player.vx = 5;
-    else if(dx < -10) player.vx = -5;
-    else player.vx = 0;
-  });
-  canvas.addEventListener('touchend', e => {
-    player.vx = 0;
-    touchStartX = null;
-  });
-
-  // --- Меню ---
-  function showScreen(screen) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    screen.classList.add('active');
-  }
-
-  function startGame() {
+  // Запуск игры
+  function startGame(){
     gameOver = false;
     scrollOffset = 0;
     coinsCount = 0;
@@ -368,167 +295,44 @@ document.addEventListener('DOMContentLoaded', () => {
     player.vx = 0;
     player.vy = 0;
     initPlatforms();
-    // Добавляем монеты случайно на платформах
-    platforms.forEach(p => { p.coin = Math.random() < 0.3; });
-    showScreen(null);
+    coinsEl.textContent = coinsCount;
+    scoreEl.textContent = scrollOffset;
+    hideGameOver();
+    showScreen(gameScreen);
     gameLoop();
   }
 
-  function endGame() {
-    gameOver = true;
-    playerCoins += coinsCount;
-    localStorage.setItem('playerCoins', playerCoins);
-    finalScoreEl.textContent = Math.floor(scrollOffset);
-    finalCoinsEl.textContent = coinsCount;
-    shopCoinsEl.textContent = playerCoins;
-    showScreen(gameOverScreen);
-  }
-
-  // --- Магазин ---
-  function renderShop() {
-    shopCoinsEl.textContent = playerCoins;
-    // Скины
-    skinsList.innerHTML = '';
-    skins.forEach(skin => {
-      const div = document.createElement('div');
-      div.className = 'shop-item';
-
-      const preview = document.createElement('div');
-      preview.className = 'skin-preview';
-      if(skin.img){
-        preview.style.backgroundImage = `url(${skin.img})`;
-      } else {
-        preview.style.backgroundColor = skin.color;
-      }
-      div.appendChild(preview);
-
-      const name = document.createElement('div');
-      name.textContent = skin.name;
-      div.appendChild(name);
-
-      const price = document.createElement('div');
-      if(ownedSkins.includes(skin.id)){
-        price.textContent = (selectedSkin === skin.id) ? 'Выбрано' : 'Куплено';
-      } else {
-        price.textContent = skin.price + ' SL';
-      }
-      div.appendChild(price);
-
-      const btn = document.createElement('button');
-      if(ownedSkins.includes(skin.id)){
-        if(selectedSkin === skin.id){
-          btn.textContent = 'Текущий';
-          btn.disabled = true;
-        } else {
-          btn.textContent = 'Выбрать';
-          btn.onclick = () => {
-            selectedSkin = skin.id;
-            localStorage.setItem('selectedSkin', selectedSkin);
-            renderShop();
-          };
-        }
-      } else {
-        btn.textContent = 'Купить';
-        btn.onclick = () => {
-          if(playerCoins >= skin.price){
-            playerCoins -= skin.price;
-            localStorage.setItem('playerCoins', playerCoins);
-            ownedSkins.push(skin.id);
-            localStorage.setItem('ownedSkins', JSON.stringify(ownedSkins));
-            selectedSkin = skin.id;
-            localStorage.setItem('selectedSkin', selectedSkin);
-            renderShop();
-          } else {
-            alert('Недостаточно монет');
-          }
-        };
-      }
-      div.appendChild(btn);
-
-      skinsList.appendChild(div);
-    });
-
-    // Усилители
-    boostersList.innerHTML = '';
-    boosters.forEach(boost => {
-      const div = document.createElement('div');
-      div.className = 'shop-item';
-
-      const name = document.createElement('div');
-      name.textContent = boost.name;
-      div.appendChild(name);
-
-      const desc = document.createElement('div');
-      desc.className = 'boost-desc';
-      desc.textContent = boost.desc + ' (У вас: ' + (playerBoosts[boost.id] || 0) + ')';
-      div.appendChild(desc);
-
-      const btn = document.createElement('button');
-      btn.textContent = 'Купить за ' + boost.price + ' SL';
-      btn.onclick = () => {
-        if(playerCoins >= boost.price){
-          playerCoins -= boost.price;
-          playerBoosts[boost.id] = (playerBoosts[boost.id] || 0) + 1;
-          localStorage.setItem('playerCoins', playerCoins);
-          localStorage.setItem('playerBoosts', JSON.stringify(playerBoosts));
-          renderShop();
-        } else {
-          alert('Недостаточно монет');
-        }
-      };
-      div.appendChild(btn);
-
-      boostersList.appendChild(div);
-    });
-  }
-
-  // --- Рейтинг ---
-  function renderRating() {
-    let listHtml = '';
-    let dummyPlayers = [
-      {name: 'Игрок1', score: 800},
-      {name: 'Игрок2', score: 650},
-      {name: 'Игрок3', score: 500},
-      {name: 'Вы', score: Math.floor(scrollOffset)},
-    ];
-    dummyPlayers.sort((a,b) => b.score - a.score);
-    dummyPlayers.forEach((p,i) => {
-      listHtml += `<div>${i+1}. ${p.name}: ${p.score} м</div>`;
-    });
-    ratingList.innerHTML = listHtml;
-  }
-
-  // --- События кнопок ---
-  startGameBtn.onclick = () => {
+  restartBtn.onclick = () => {
     startGame();
   };
-  restartGameBtn.onclick = () => {
-    startGame();
-  };
-  goToMenuBtn1.onclick = () => {
-    showScreen(menu);
-  };
-  openShopBtn.onclick = () => {
-    renderShop();
-    showScreen(shopScreen);
-  };
-  closeShopBtn.onclick = () => {
-    showScreen(menu);
-  };
-  openRatingBtn.onclick = () => {
-    renderRating();
-    showScreen(ratingScreen);
-  };
-  closeRatingBtn.onclick = () => {
+  exitBtn.onclick = () => {
     showScreen(menu);
   };
 
-  // Начальный экран виден, игра остановлена
-  showScreen(menu);
-});
+  // Управление игроком с клавиатуры
+  window.addEventListener('keydown', e => {
+    if(e.code === 'ArrowLeft') player.vx = -6;
+    else if(e.code === 'ArrowRight') player.vx = 6;
+  });
+  window.addEventListener('keyup', e => {
+    if(e.code === 'ArrowLeft' || e.code === 'ArrowRight') player.vx = 0;
+  });
+
+  // Управление с тач-устройств (левая и правая половина экрана)
+  canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const touchX = e.touches[0].clientX;
+    if(touchX < window.innerWidth/2) player.vx = -6;
+    else player.vx = 6;
+  }, {passive:false});
+  canvas.addEventListener('touchend', e => {
+    e.preventDefault();
+    player.vx = 0;
+  }, {passive:false});
 </script>
 
 </body>
 </html>
+
 
 
