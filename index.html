@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Social Lift Jump — Полная рабочая версия</title>
+<title>Social Lift Jump — С заставкой и рабочими кнопками</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
   body, html {
@@ -17,7 +17,7 @@
   #gameCanvas {
     position: relative;
     z-index: 1;
-    pointer-events: none; /* Клики проходят сквозь canvas */
+    pointer-events: none; /* Чтобы клики проходили к кнопкам */
     display: block;
     margin: 0 auto;
     background: transparent;
@@ -83,39 +83,28 @@
   button:hover {
     background-color: #0099cc;
   }
-  .shop-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 8px 0;
-    border-bottom: 1px solid #00bfff44;
-    padding-bottom: 8px;
-  }
-  .skin-preview {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    margin-right: 12px;
-    background-size: cover;
-    background-position: center;
-    border: 2px solid #00BFFF;
-    flex-shrink: 0;
-  }
-  .boost-desc {
-    font-size: 13px;
-    color: #00BFFF;
-    margin-left: 8px;
-  }
-  #ratingList {
-    max-height: 200px;
-    overflow-y: auto;
-    text-align: left;
-    margin-top: 10px;
-    font-size: 16px;
+  #splashScreen {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 320px;
+    max-width: 95vw;
+    max-height: 80vh;
+    padding: 20px;
+    background: transparent;
+    color: #00bfff;
+    font-size: 36px;
+    font-weight: 900;
+    text-align: center;
+    transform: translate(-50%, -50%);
+    user-select: none;
+    z-index: 100;
   }
 </style>
 </head>
 <body>
+
+<div id="splashScreen">Social Lift Game</div>
 
 <canvas id="gameCanvas" width="320" height="480"></canvas>
 
@@ -124,7 +113,7 @@
   <div>Монеты SL: <span id="coins">0</span></div>
 </div>
 
-<div id="menu" class="screen active">
+<div id="menu" class="screen">
   <h2>Social Lift Jump</h2>
   <button id="startGameBtn">Начать игру</button>
   <button id="openShopBtn">Магазин</button>
@@ -158,6 +147,11 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   // Элементы
+  const splashScreen = document.getElementById('splashScreen');
+  const menu = document.getElementById('menu');
+  const gameOverScreen = document.getElementById('gameOverScreen');
+  const shopScreen = document.getElementById('shopScreen');
+  const ratingScreen = document.getElementById('ratingScreen');
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
   const width = canvas.width;
@@ -165,25 +159,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const scoreEl = document.getElementById('score');
   const coinsEl = document.getElementById('coins');
-  const menu = document.getElementById('menu');
   const startGameBtn = document.getElementById('startGameBtn');
   const openShopBtn = document.getElementById('openShopBtn');
   const openRatingBtn = document.getElementById('openRatingBtn');
-  const gameOverScreen = document.getElementById('gameOverScreen');
   const finalScoreEl = document.getElementById('finalScore');
   const finalCoinsEl = document.getElementById('finalCoins');
   const restartGameBtn = document.getElementById('restartGameBtn');
   const goToMenuBtn1 = document.getElementById('goToMenuBtn1');
-  const shopScreen = document.getElementById('shopScreen');
   const skinsList = document.getElementById('skinsList');
   const boostersList = document.getElementById('boostersList');
   const shopCoinsEl = document.getElementById('shopCoins');
   const closeShopBtn = document.getElementById('closeShopBtn');
-  const ratingScreen = document.getElementById('ratingScreen');
   const ratingList = document.getElementById('ratingList');
   const closeRatingBtn = document.getElementById('closeRatingBtn');
 
-  // Игровые переменные
+  // Переменные игры
   let player = { x: width/2 - 18, y: height - 140, width: 36, height: 36, vy: 0, vx: 0, gravity: 0.35, jumpForce: -10, speedX: 0 };
   let platforms = [];
   const platformGap = 50;
@@ -310,7 +300,6 @@ document.addEventListener('DOMContentLoaded', () => {
     ctx.fill();
     ctx.restore();
   }
-
   function drawPlayer() {
     const skin = skins.find(s => s.id === selectedSkin);
     if(skin && skin.img) {
@@ -445,28 +434,6 @@ document.addEventListener('DOMContentLoaded', () => {
     requestAnimationFrame(gameLoop);
   }
 
-  // Звёздный фон
-  const stars = [];
-  const starCount = 60;
-  for(let i=0; i<starCount; i++) {
-    stars.push({
-      x: Math.random()*width,
-      y: Math.random()*height,
-      r: Math.random()*1.5 + 0.5,
-      speed: (Math.random()*0.3)+0.05
-    });
-  }
-  function drawStars() {
-    ctx.fillStyle = '#fff';
-    stars.forEach(s => {
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
-      ctx.fill();
-      s.y += s.speed;
-      if(s.y > height) s.y = 0;
-    });
-  }
-
   function updateCoinsUI() {
     coinsEl.textContent = playerCoins;
     shopCoinsEl.textContent = playerCoins;
@@ -487,6 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCoinsUI();
     scoreEl.textContent = '0';
     coinsEl.textContent = playerCoins;
+    splashScreen.style.display = 'none';
     menu.classList.remove('active');
     gameOverScreen.classList.remove('active');
     shopScreen.classList.remove('active');
@@ -512,35 +480,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if(gameOver) return;
     player.vy = player.jumpForce - (playerBoosts.jump || 0);
   }, { passive: false });
-
-  // Кнопки
-  startGameBtn.addEventListener('click', startGame);
-  restartGameBtn.addEventListener('click', startGame);
-  goToMenuBtn1.addEventListener('click', () => {
-    gameOverScreen.classList.remove('active');
-    menu.classList.add('active');
-  });
-  openShopBtn.addEventListener('click', () => {
-    renderShop();
-    shopScreen.classList.add('active');
-  });
-  closeShopBtn.addEventListener('click', () => {
-    shopScreen.classList.remove('active');
-  });
-  openRatingBtn.addEventListener('click', () => {
-    const localLeaderboard = JSON.parse(localStorage.getItem('localLeaderboard') || '[]');
-    if(localLeaderboard.length === 0) {
-      ratingList.textContent = 'Рейтинг пуст';
-    } else {
-      ratingList.innerHTML = localLeaderboard.map((u,i) =>
-        `<b>${i+1}.</b> ${u.name} <span style="float:right">${u.score} м</span>`
-      ).join('<br>');
-    }
-    ratingScreen.classList.add('active');
-  });
-  closeRatingBtn.addEventListener('click', () => {
-    ratingScreen.classList.remove('active');
-  });
 
   // Магазин
   function renderShop() {
@@ -618,11 +557,42 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('localLeaderboard', JSON.stringify(localLeaderboard));
   }
 
-  // Инициализация UI и кнопок
-  updateCoinsUI();
-  renderShop();
+  // Обработчики кнопок
+  startGameBtn.addEventListener('click', startGame);
+  restartGameBtn.addEventListener('click', startGame);
+  goToMenuBtn1.addEventListener('click', () => {
+    gameOverScreen.classList.remove('active');
+    menu.classList.add('active');
+  });
+  openShopBtn.addEventListener('click', () => {
+    renderShop();
+    shopScreen.classList.add('active');
+  });
+  closeShopBtn.addEventListener('click', () => {
+    shopScreen.classList.remove('active');
+  });
+  openRatingBtn.addEventListener('click', () => {
+    const localLeaderboard = JSON.parse(localStorage.getItem('localLeaderboard') || '[]');
+    if(localLeaderboard.length === 0) {
+      ratingList.textContent = 'Рейтинг пуст';
+    } else {
+      ratingList.innerHTML = localLeaderboard.map((u,i) =>
+        `<b>${i+1}.</b> ${u.name} <span style="float:right">${u.score} м</span>`
+      ).join('<br>');
+    }
+    ratingScreen.classList.add('active');
+  });
+  closeRatingBtn.addEventListener('click', () => {
+    ratingScreen.classList.remove('active');
+  });
+
+  // Стартовый экран-заставка
+  setTimeout(() => {
+    splashScreen.style.display = 'none';
+    menu.classList.add('active');
+  }, 2000); // Показываем 2 секунды
+
 });
 </script>
 </body>
 </html>
-
