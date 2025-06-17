@@ -482,18 +482,7 @@
 
   // Сенсорное управление: экран делим на левую и правую части для движения
   canvas.addEventListener('touchstart', (e) => {
-    if (gameState !== 'playing') return
-
-3/3
-
-
-
-
-
-
-
-ChatGPT сказал:
-Array(2).fill(c.width/2), 0, 0, Math.PI*2);
+    if (gameState !== 'playing') return Array(2).fill(c.width/2), 0, 0, Math.PI*2);
 ctx.fill();
 }
 });
@@ -508,10 +497,6 @@ ctx.fillRect(player.x, player.y, player.width, player.height);
 // Главный игровой цикл
 function gameLoop() {
 if (gameState !== 'playing') return;
-
-scss
-Копировать
-Редактировать
 ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
 handlePlayerMovement();
