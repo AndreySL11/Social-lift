@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Social Lift Jump — Улучшенная версия</title>
+<title>Social Lift Jump — Итоговая версия</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
   body, html {
@@ -24,6 +24,7 @@
     max-height: 80vh;
     position: relative;
     z-index: 1;
+    pointer-events: none; /* Чтобы кнопки были кликабельны поверх */
   }
   #ui {
     position: fixed;
@@ -53,7 +54,7 @@
     text-align: center;
     color: #fff;
     user-select: none;
-    z-index: 1050;
+    z-index: 10;
     display: none;
     overflow-y: auto;
     pointer-events: auto;
@@ -79,7 +80,7 @@
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
-    z-index: 1100;
+    z-index: 20;
   }
   button:hover {
     background-color: #0099cc;
@@ -238,7 +239,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let selectedSkin = parseInt(localStorage.getItem('selectedSkin') || '0');
   let playerBoosts = JSON.parse(localStorage.getItem('playerBoosts') || '{"jump":0,"coin":0}');
 
-  // Виды платформ
   const platformTypes = ['static', 'moving', 'breaking', 'spike'];
 
   class Platform {
@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       if(this.type === 'breaking' && this.broken) {
-        this.y += 5; // падает вниз
+        this.y += 5;
       }
     }
     draw(ctx) {
@@ -448,7 +448,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Рисуем простую утку
   function drawDuck(x, y, w, h) {
     ctx.save();
     ctx.translate(x, y);
@@ -523,17 +522,6 @@ document.addEventListener('DOMContentLoaded', () => {
     platforms.forEach(p => p.draw(ctx));
   }
 
-  // Звёздный фон
-  const stars = [];
-  const starCount = 60;
-  for(let i=0; i<starCount; i++) {
-    stars.push({
-      x: Math.random()*width,
-      y: Math.random()*height,
-      r: Math.random()*1.5 + 0.5,
-      speed: (Math.random()*0.3)+0.05
-    });
-  }
   function drawStars() {
     ctx.fillStyle = '#fff';
     stars.forEach(s => {
@@ -545,10 +533,42 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Звёздный фон
+  const stars = [];
+  const starCount = 60;
+  for(let i=0; i<starCount; i++) {
+    stars.push({
+      x: Math.random()*width,
+      y: Math.random()*height,
+      r: Math.random()*1.5 + 0.5,
+      speed: (Math.random()*0.3)+0.05
+    });
+  }
+
+  // Управление клавишами
+  let leftPressed = false;
+  let rightPressed = false;
+  window.addEventListener('keydown', e => {
+    if(e.key === 'ArrowLeft') leftPressed = true;
+    if(e.key === 'ArrowRight') rightPressed = true;
+  });
+  window.addEventListener('keyup', e => {
+    if(e.key === 'ArrowLeft') leftPressed = false;
+    if(e.key === 'ArrowRight') rightPressed = false;
+  });
+
+  function handleKeyboardMovement() {
+    if(gameOver) return;
+    if(leftPressed) player.vx = -5;
+    else if(rightPressed) player.vx = 5;
+    else player.vx = 0;
+  }
+
   function gameLoop() {
     if(gameOver) return;
     ctx.clearRect(0, 0, width, height);
     drawStars();
+    handleKeyboardMovement();
     updatePlayer();
     updatePlatforms();
 
@@ -563,8 +583,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     drawPlatforms();
     drawPlayer();
-
-    player.vx = 0;
 
     requestAnimationFrame(gameLoop);
   }
@@ -603,26 +621,6 @@ document.addEventListener('DOMContentLoaded', () => {
     saveProgress();
   }
 
-  // Управление: стрелки влево/вправо на ПК
-  let leftPressed = false;
-  let rightPressed = false;
-  window.addEventListener('keydown', e => {
-    if(e.key === 'ArrowLeft') leftPressed = true;
-    if(e.key === 'ArrowRight') rightPressed = true;
-  });
-  window.addEventListener('keyup', e => {
-    if(e.key === 'ArrowLeft') leftPressed = false;
-    if(e.key === 'ArrowRight') rightPressed = false;
-  });
-
-  function handleKeyboardMovement() {
-    if(gameOver) return;
-    if(leftPressed) player.vx = -5;
-    else if(rightPressed) player.vx = 5;
-    else player.vx = 0;
-  }
-
-  // Тап по экрану — прыжок
   canvas.addEventListener('click', () => {
     if(gameOver) return;
     player.vy = player.jumpForce - (playerBoosts.jump || 0);
@@ -633,45 +631,21 @@ document.addEventListener('DOMContentLoaded', () => {
     player.vy = player.jumpForce - (playerBoosts.jump || 0);
   }, { passive: false });
 
-  // Перезапись gameLoop для поддержки клавиш
-  function enhancedGameLoop() {
-    if(gameOver) return;
-    ctx.clearRect(0, 0, width, height);
-    drawStars();
-    handleKeyboardMovement();
-    updatePlayer();
-    updatePlatforms();
+  // Инициализация
+  updateCoinsUI();
+  renderShop();
 
-    if(player.y < height/2) {
-      let diff = (height/2) - player.y;
-      player.y += diff;
-      platforms.forEach(p => p.y += diff);
-      scrollOffset += diff;
-      coinsCount = Math.max(0, Math.floor(scrollOffset/10));
-      scoreEl.textContent = coinsCount;
-    }
-
-    drawPlatforms();
-    drawPlayer();
-
-    requestAnimationFrame(enhancedGameLoop);
-  }
-
-  // Переключаем на улучшенный цикл при старте
+  // Кнопки
   startGameBtn.addEventListener('click', () => {
     startGame();
-    requestAnimationFrame(enhancedGameLoop);
   });
   restartGameBtn.addEventListener('click', () => {
     startGame();
-    requestAnimationFrame(enhancedGameLoop);
   });
   goToMenuBtn1.addEventListener('click', () => {
     gameOverScreen.classList.remove('active');
     menu.classList.add('active');
   });
-
-  // Остальные кнопки
   openShopBtn.addEventListener('click', () => {
     renderShop();
     shopScreen.classList.add('active');
@@ -694,9 +668,13 @@ document.addEventListener('DOMContentLoaded', () => {
     ratingScreen.classList.remove('active');
   });
 
-  // Инициализация
-  updateCoinsUI();
-  renderShop();
+  function loadProgress() {
+    playerCoins = parseInt(localStorage.getItem('playerCoins')) || 0;
+    ownedSkins = JSON.parse(localStorage.getItem('ownedSkins') || '[0]');
+    selectedSkin = parseInt(localStorage.getItem('selectedSkin') || '0');
+    playerBoosts = JSON.parse(localStorage.getItem('playerBoosts') || '{"jump":0,"coin":0}');
+  }
+  loadProgress();
 });
 </script>
 </body>
