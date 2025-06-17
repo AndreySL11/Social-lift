@@ -3,336 +3,130 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Social Lift Jump</title>
+<title>Simple Jump Game</title>
 <style>
-  body {
-    margin: 0;
+  body, html {
+    margin: 0; padding: 0; height: 100%;
+    background: #000;
+    color: #fff;
     font-family: Arial, sans-serif;
-    background: #111;
-    color: white;
+    user-select: none;
+    overflow: hidden;
+  }
+  #menu {
+    width: 320px;
+    margin: 50px auto;
     text-align: center;
   }
-  .screen {
-    display: none;
-    padding: 20px;
-  }
-  .screen.active {
-    display: block;
-  }
   button {
-    background: #00BFFF;
-    border: none;
-    color: white;
+    font-size: 20px;
     padding: 12px 24px;
-    margin: 8px;
-    font-size: 18px;
+    border-radius: 8px;
+    border: none;
     cursor: pointer;
-    border-radius: 5px;
+    background-color: #00bfff;
+    color: #000;
   }
   button:hover {
-    background: #0099cc;
+    background-color: #0099cc;
   }
-  #gameScreen {
-    max-width: 400px;
-    margin: 0 auto;
-  }
-  canvas {
-    background: linear-gradient(to top, #001F3F, #00BFFF);
-    border-radius: 10px;
+  #gameCanvas {
     display: block;
     margin: 0 auto;
-    box-shadow: 0 0 20px #00bfffaa;
-  }
-  #gameInfo {
-    margin-top: 10px;
-    font-size: 20px;
-  }
-  #gameOverMessage {
-    font-size: 24px;
-    margin-top: 20px;
-    color: #ff4444;
+    background: #111;
+    border-radius: 12px;
+    box-shadow: 0 0 20px #00bfff;
   }
 </style>
 </head>
 <body>
 
-<!-- Главное меню -->
-<div id="menu" class="screen active">
-  <h1>Social Lift Jump</h1>
-  <button id="playBtn">Играть</button>
-  <button id="shopBtn">Магазин</button>
-  <button id="ratingBtn">Рейтинг</button>
+<div id="menu">
+  <h1>Simple Jump Game</h1>
+  <button id="startBtn">Начать игру</button>
 </div>
 
-<!-- Магазин -->
-<div id="shopScreen" class="screen">
-  <h2>Магазин (пока пусто)</h2>
-  <button id="backFromShopBtn">Назад</button>
-</div>
-
-<!-- Рейтинг -->
-<div id="ratingScreen" class="screen">
-  <h2>Рейтинг (пока пусто)</h2>
-  <button id="backFromRatingBtn">Назад</button>
-</div>
-
-<!-- Экран игры -->
-<div id="gameScreen" class="screen">
-  <canvas id="gameCanvas" width="400" height="600"></canvas>
-  <div id="gameInfo">
-    Высота: <span id="score">0</span> м &nbsp;&nbsp; Монеты: <span id="coins">0</span>
-  </div>
-  <div id="gameOverMessage" style="display:none;">
-    Игра окончена!<br />
-    <button id="restartBtn">Перезапустить</button>
-    <button id="exitBtn">Выйти в меню</button>
-  </div>
-</div>
+<canvas id="gameCanvas" width="320" height="480" style="display:none;"></canvas>
 
 <script>
-  // Навигация по экранам
+  const startBtn = document.getElementById('startBtn');
   const menu = document.getElementById('menu');
-  const shopScreen = document.getElementById('shopScreen');
-  const ratingScreen = document.getElementById('ratingScreen');
-  const gameScreen = document.getElementById('gameScreen');
-
-  function showScreen(screen) {
-    [menu, shopScreen, ratingScreen, gameScreen].forEach(s => s.classList.remove('active'));
-    if(screen) screen.classList.add('active');
-  }
-
-  document.getElementById('playBtn').onclick = () => {
-    startGame();
-  };
-  document.getElementById('shopBtn').onclick = () => {
-    showScreen(shopScreen);
-  };
-  document.getElementById('ratingBtn').onclick = () => {
-    showScreen(ratingScreen);
-  };
-  document.getElementById('backFromShopBtn').onclick = () => {
-    showScreen(menu);
-  };
-  document.getElementById('backFromRatingBtn').onclick = () => {
-    showScreen(menu);
-  };
-
-  // Игра
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
-  const width = canvas.width;
-  const height = canvas.height;
 
-  const scoreEl = document.getElementById('score');
-  const coinsEl = document.getElementById('coins');
-  const gameOverMessage = document.getElementById('gameOverMessage');
-
-  const restartBtn = document.getElementById('restartBtn');
-  const exitBtn = document.getElementById('exitBtn');
-
-  // Игрок
-  const player = {
-    x: width / 2 - 20,
-    y: height - 140,
-    width: 40,
-    height: 40,
-    vy: 0,
-    vx: 0,
-    color: '#FFD700',
-    jumpPower: 14,
-    gravity: 0.6
-  };
-
-  // Платформы
+  let player = { x: 140, y: 400, w: 40, h: 40, vy: 0, gravity: 0.5, jumpPower: -10 };
   let platforms = [];
-  const platformWidth = 80;
-  const platformHeight = 15;
+  let gameRunning = false;
 
-  // Игра
-  let scrollOffset = 0;
-  let coinsCount = 0;
-  let gameOver = false;
-
-  // Создание платформ
-  function initPlatforms() {
+  function createPlatforms() {
     platforms = [];
-    // Начальная платформа
-    platforms.push({x: width/2 - platformWidth/2, y: height - 100, width: platformWidth, height: platformHeight, coin: false});
-    for(let i = 1; i < 10; i++) {
-      const x = Math.random() * (width - platformWidth);
-      const y = height - 100 - i * 60;
-      platforms.push({x, y, width: platformWidth, height: platformHeight, coin: Math.random() < 0.3});
+    platforms.push({x: 50, y: 450, w: 220, h: 15});
+    for(let i=0; i<10; i++) {
+      platforms.push({
+        x: Math.random() * 280,
+        y: 400 - i*40,
+        w: 80,
+        h: 15
+      });
     }
   }
 
-  // Проверка столкновений с платформами
-  function checkPlatformCollision() {
-    platforms.forEach(p => {
-      if(
-        player.vy > 0 && // падаем вниз
-        player.x + player.width > p.x &&
-        player.x < p.x + p.width &&
-        player.y + player.height >= p.y &&
-        player.y + player.height <= p.y + p.height
-      ) {
-        player.vy = -player.jumpPower;
-      }
-    });
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#00bfff';
+    platforms.forEach(p => ctx.fillRect(p.x, p.y, p.w, p.h));
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(player.x, player.y, player.w, player.h);
   }
 
-  // Проверка сбора монет
-  function checkCoins() {
-    platforms.forEach(p => {
-      if(p.coin){
-        // монета - круг посередине платформы
-        const coinX = p.x + p.width / 2;
-        const coinY = p.y - 10;
-        const distX = (player.x + player.width/2) - coinX;
-        const distY = (player.y + player.height/2) - coinY;
-        const dist = Math.sqrt(distX * distX + distY * distY);
-        if(dist < 20){
-          coinsCount++;
-          p.coin = false;
-          coinsEl.textContent = coinsCount;
-        }
-      }
-    });
-  }
-
-  // Обновление позиции игрока и платформ
   function update() {
     player.vy += player.gravity;
     player.y += player.vy;
-    player.x += player.vx;
 
-    // Горизонтальный перенос (при выходе за границы экрана)
-    if(player.x + player.width < 0) player.x = width;
-    else if(player.x > width) player.x = -player.width;
-
-    checkPlatformCollision();
-    checkCoins();
-
-    // Скроллим платформы, если игрок поднимается выше 1/3 высоты
-    if(player.y < height / 3){
-      const diff = (height / 3) - player.y;
-      player.y = height / 3;
-      scrollOffset += diff;
-      platforms.forEach(p => {
-        p.y += diff;
-      });
-
-      // Удаляем платформы, вышедшие за низ и добавляем новые сверху
-      platforms = platforms.filter(p => p.y < height + 50);
-      while(platforms.length < 10){
-        const lastY = platforms.reduce((min, p) => Math.min(min, p.y), height);
-        const x = Math.random() * (width - platformWidth);
-        const y = lastY - 60;
-        platforms.push({x, y, width: platformWidth, height: platformHeight, coin: Math.random() < 0.3});
-      }
-    }
-
-    // Игра заканчивается, если игрок упал вниз
-    if(player.y > height){
-      gameOver = true;
-      showGameOver();
-    }
-
-    scoreEl.textContent = Math.floor(scrollOffset);
-  }
-
-  function showGameOver(){
-    gameOverMessage.style.display = 'block';
-  }
-  function hideGameOver(){
-    gameOverMessage.style.display = 'none';
-  }
-
-  // Рисуем игрока
-  function drawPlayer() {
-    ctx.fillStyle = player.color;
-    ctx.fillRect(player.x, player.y, player.width, player.height);
-  }
-
-  // Рисуем платформы и монеты
-  function drawPlatforms() {
     platforms.forEach(p => {
-      // Платформа
-      ctx.fillStyle = '#654321';
-      ctx.fillRect(p.x, p.y, p.width, p.height);
-
-      // Монета
-      if(p.coin){
-        ctx.beginPath();
-        ctx.fillStyle = 'gold';
-        ctx.arc(p.x + p.width / 2, p.y - 10, 8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = 'orange';
-        ctx.stroke();
+      if(player.vy > 0 &&
+         player.x + player.w > p.x &&
+         player.x < p.x + p.w &&
+         player.y + player.h > p.y &&
+         player.y + player.h < p.y + p.h + player.vy) {
+        player.y = p.y - player.h;
+        player.vy = player.jumpPower;
       }
     });
+
+    if(player.y > canvas.height) {
+      gameRunning = false;
+      alert('Игра окончена!');
+      menu.style.display = 'block';
+      canvas.style.display = 'none';
+    }
   }
 
-  // Игровой цикл
-  function gameLoop(){
-    if(gameOver) return;
-
-    ctx.clearRect(0, 0, width, height);
-
+  function gameLoop() {
+    if(!gameRunning) return;
     update();
-    drawPlatforms();
-    drawPlayer();
-
+    draw();
     requestAnimationFrame(gameLoop);
   }
 
-  // Запуск игры
-  function startGame(){
-    gameOver = false;
-    scrollOffset = 0;
-    coinsCount = 0;
-    player.x = width/2 - player.width/2;
-    player.y = height - 140;
-    player.vx = 0;
+  canvas.addEventListener('click', () => {
+    if(!gameRunning) return;
+    player.vy = player.jumpPower;
+  });
+
+  startBtn.addEventListener('click', () => {
+    menu.style.display = 'none';
+    canvas.style.display = 'block';
+    player.x = 140;
+    player.y = 400;
     player.vy = 0;
-    initPlatforms();
-    coinsEl.textContent = coinsCount;
-    scoreEl.textContent = scrollOffset;
-    hideGameOver();
-    showScreen(gameScreen);
+    createPlatforms();
+    gameRunning = true;
     gameLoop();
-  }
-
-  restartBtn.onclick = () => {
-    startGame();
-  };
-  exitBtn.onclick = () => {
-    showScreen(menu);
-  };
-
-  // Управление игроком с клавиатуры
-  window.addEventListener('keydown', e => {
-    if(e.code === 'ArrowLeft') player.vx = -6;
-    else if(e.code === 'ArrowRight') player.vx = 6;
   });
-  window.addEventListener('keyup', e => {
-    if(e.code === 'ArrowLeft' || e.code === 'ArrowRight') player.vx = 0;
-  });
-
-  // Управление с тач-устройств (левая и правая половина экрана)
-  canvas.addEventListener('touchstart', e => {
-    e.preventDefault();
-    const touchX = e.touches[0].clientX;
-    if(touchX < window.innerWidth/2) player.vx = -6;
-    else player.vx = 6;
-  }, {passive:false});
-  canvas.addEventListener('touchend', e => {
-    e.preventDefault();
-    player.vx = 0;
-  }, {passive:false});
 </script>
 
 </body>
 </html>
-
 
 
