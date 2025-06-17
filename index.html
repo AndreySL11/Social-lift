@@ -10,9 +10,9 @@
     margin: 0; padding: 0; height: 100%;
     background: linear-gradient(to top, #0b3d91, #1e5fcf);
     font-family: 'Montserrat', sans-serif;
-    overflow: hidden;
     color: #fff;
     user-select: none;
+    overflow: hidden;
   }
   #gameCanvas {
     display: block;
@@ -24,7 +24,7 @@
     max-height: 80vh;
     position: relative;
     z-index: 1;
-    pointer-events: none; /* Чтобы кнопки были кликабельны поверх */
+    pointer-events: none; /* чтобы кнопки были кликабельны поверх */
   }
   #ui {
     position: fixed;
@@ -77,9 +77,6 @@
     user-select: none;
     pointer-events: auto;
     transition: background-color 0.3s ease;
-    -webkit-user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
     z-index: 20;
   }
   button:hover {
@@ -137,8 +134,8 @@
   <h2>Игра окончена</h2>
   <p>Ваш результат: <span id="finalScore">0</span> м</p>
   <p>Монеты: <span id="finalCoins">0</span></p>
-  <button id="restartGameBtn">Начать заново</button>
-  <button id="goToMenuBtn1">В меню</button>
+  <button id="restartGameBtn">Сыграть еще раз</button>
+  <button id="goToMenuBtn1">Меню</button>
 </div>
 
 <div id="shopScreen" class="screen">
@@ -183,50 +180,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const ratingScreen = document.getElementById('ratingScreen');
   const ratingList = document.getElementById('ratingList');
   const closeRatingBtn = document.getElementById('closeRatingBtn');
-
-  // Звёздный фон
-  const stars = [];
-  const starCount = 60;
-  for(let i=0; i<starCount; i++) {
-    stars.push({
-      x: Math.random()*width,
-      y: Math.random()*height,
-      r: Math.random()*1.5 + 0.5,
-      speed: (Math.random()*0.3)+0.05
-    });
-  }
-  function drawStars() {
-    ctx.fillStyle = '#fff';
-    stars.forEach(s => {
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
-      ctx.fill();
-      s.y += s.speed;
-      if(s.y > height) s.y = 0;
-    });
-  }
-
-  // Игрок - утка
-  function drawDuck(x, y, w, h) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.fillStyle = '#FFD700';
-    ctx.beginPath();
-    ctx.ellipse(w/2, h/2, w/2, h/2, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.arc(w*0.65, h*0.4, w*0.12, 0, Math.PI*2);
-    ctx.fill();
-    ctx.fillStyle = '#FFA500';
-    ctx.beginPath();
-    ctx.moveTo(w*0.8, h*0.6);
-    ctx.lineTo(w*0.95, h*0.55);
-    ctx.lineTo(w*0.8, h*0.7);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
 
   let player = { x: width/2 - 18, y: height - 140, width: 36, height: 36, vy: 0, vx: 0, gravity: 0.35, jumpForce: -10 };
   let platforms = [];
@@ -522,17 +475,6 @@ document.addEventListener('DOMContentLoaded', () => {
     platforms.forEach(p => p.draw(ctx));
   }
 
-  function drawStars() {
-    ctx.fillStyle = '#fff';
-    stars.forEach(s => {
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
-      ctx.fill();
-      s.y += s.speed;
-      if(s.y > height) s.y = 0;
-    });
-  }
-
   // Звёздный фон
   const stars = [];
   const starCount = 60;
@@ -542,6 +484,17 @@ document.addEventListener('DOMContentLoaded', () => {
       y: Math.random()*height,
       r: Math.random()*1.5 + 0.5,
       speed: (Math.random()*0.3)+0.05
+    });
+  }
+
+  function drawStars() {
+    ctx.fillStyle = '#fff';
+    stars.forEach(s => {
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fill();
+      s.y += s.speed;
+      if(s.y > height) s.y = 0;
     });
   }
 
@@ -636,12 +589,8 @@ document.addEventListener('DOMContentLoaded', () => {
   renderShop();
 
   // Кнопки
-  startGameBtn.addEventListener('click', () => {
-    startGame();
-  });
-  restartGameBtn.addEventListener('click', () => {
-    startGame();
-  });
+  startGameBtn.addEventListener('click', startGame);
+  restartGameBtn.addEventListener('click', startGame);
   goToMenuBtn1.addEventListener('click', () => {
     gameOverScreen.classList.remove('active');
     menu.classList.add('active');
