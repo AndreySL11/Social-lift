@@ -39,26 +39,6 @@
     z-index: 1000;
     pointer-events: none;
   }
-  button {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 700;
-    font-size: 18px;
-    padding: 10px 20px;
-    border-radius: 12px;
-    border: none;
-    cursor: pointer;
-    background-color: #00bfff;
-    color: #000;
-    margin: 8px;
-    box-shadow: 0 0 20px #00bfffaa;
-    user-select: none;
-    pointer-events: auto;
-    transition: background-color 0.3s ease;
-    z-index: 1100;
-  }
-  button:hover {
-    background-color: #0099cc;
-  }
   .screen {
     position: fixed;
     top: 50%;
@@ -155,7 +135,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
 <script>
-  // === Firebase config (замените на свои данные) ===
+  // Firebase config - замените на свои данные
   const firebaseConfig = {
     apiKey: "YOUR_API_KEY",
     authDomain: "YOUR_AUTH_DOMAIN",
@@ -168,7 +148,7 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  // === Telegram WebApp API ===
+  // Telegram WebApp API
   const tg = window.Telegram.WebApp;
   tg.expand();
   const userId = tg.initDataUnsafe.user?.id || Math.floor(Math.random()*1e9);
@@ -183,7 +163,7 @@
     tg.MainButton.hide();
   });
 
-  // === DOM ===
+  // DOM элементы
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
   const width = canvas.width;
@@ -208,7 +188,7 @@
   const ratingList = document.getElementById('ratingList');
   const closeRatingBtn = document.getElementById('closeRatingBtn');
 
-  // === Игровые переменные ===
+  // Игровые переменные
   let player = { x: width/2 - 18, y: height - 140, width: 36, height: 36, vy: 0, vx: 0, gravity: 0.35, jumpForce: -10, skinId: 0 };
   let platforms = [];
   const platformGap = 50;
@@ -225,7 +205,7 @@
   let playerBoosts = { jump: 0, coin: 0 };
   let leaderboard = [];
 
-  // === Скины (10 + секретный) ===
+  // Скины
   const skins = [
     { id: 0, name: 'Голубой', price: 0, color: '#00BFFF', img: null },
     { id: 1, name: 'Белый', price: 100, color: '#FFFFFF', img: null },
@@ -240,13 +220,13 @@
     { id: 10, name: 'Секретный', price: 0, color: '#FFD700', img: 'https://i.imgur.com/secretSkin.png' }
   ];
 
-  // === Усилители ===
+  // Усилители
   const boosters = [
     { id: 'jump', name: 'Прыжок +2', price: 150, description: 'Увеличивает силу прыжка на 2' },
     { id: 'coin', name: 'Монеты x2', price: 200, description: 'Удваивает сбор монет' }
   ];
 
-  // === Класс платформы ===
+  // Класс платформы
   class Platform {
     constructor(x, y, w, h, type='static') {
       this.x = x;
@@ -292,7 +272,7 @@
     }
   }
 
-  // === Загрузка прогресса ===
+  // Загрузка прогресса
   function loadProgress() {
     const coinsLS = localStorage.getItem('playerCoins');
     if(coinsLS) playerCoins = parseInt(coinsLS);
@@ -303,7 +283,6 @@
     const boostsLS = localStorage.getItem('playerBoosts');
     if(boostsLS) playerBoosts = JSON.parse(boostsLS);
 
-    // Открываем секретный скин при достижении 100000 очков
     if(parseInt(localStorage.getItem('bestScore') || '0') >= 100000 && !ownedSkins.includes(10)) {
       ownedSkins.push(10);
       alert('Поздравляем! Вы открыли секретный скин!');
@@ -316,7 +295,7 @@
     });
   }
 
-  // === Сохранение прогресса ===
+  // Сохранение прогресса
   function saveProgress() {
     localStorage.setItem('playerCoins', playerCoins);
     localStorage.setItem('ownedSkins', JSON.stringify(ownedSkins));
@@ -324,7 +303,7 @@
     localStorage.setItem('playerBoosts', JSON.stringify(playerBoosts));
   }
 
-  // === Сохранение результата в Firebase ===
+  // Сохранение результата в Firebase
   function submitScore(score) {
     const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
     if(score > bestScore) localStorage.setItem('bestScore', score);
@@ -335,7 +314,7 @@
     });
   }
 
-  // === Обновление рейтинга UI ===
+  // Обновление рейтинга UI
   function updateLeaderboardUI() {
     if(leaderboard.length === 0) {
       ratingList.textContent = 'Рейтинг пуст';
@@ -346,7 +325,7 @@
     ).join('<br>');
   }
 
-  // === Создание платформ ===
+  // Создание платформ
   function createPlatforms() {
     platforms = [];
     platforms.push(new Platform(width/2 - 50, height - 100, 100, 15, 'static'));
@@ -359,7 +338,7 @@
     }
   }
 
-  // === Отрисовка игрока с выбранным скином ===
+  // Отрисовка игрока
   function drawPlayer() {
     const skin = skins.find(s => s.id === selectedSkin);
     if(skin && skin.img) {
@@ -374,7 +353,7 @@
     }
   }
 
-  // === Обновление игрока ===
+  // Обновление игрока
   function updatePlayer() {
     player.vy += player.gravity;
     player.y += player.vy;
@@ -411,21 +390,21 @@
     }
   }
 
-  // === Обновление платформ ===
+  // Обновление платформ
   function updatePlatforms() {
     for(let plat of platforms) {
       plat.update();
     }
   }
 
-  // === Отрисовка платформ ===
+  // Отрисовка платформ
   function drawPlatforms() {
     for(let plat of platforms) {
       plat.draw(ctx);
     }
   }
 
-  // === Игровой цикл ===
+  // Игровой цикл
   function gameLoop() {
     if(gameOver) return;
     ctx.clearRect(0, 0, width, height);
@@ -449,13 +428,13 @@
     requestAnimationFrame(gameLoop);
   }
 
-  // === Обновление UI монет ===
+  // Обновление UI монет
   function updateCoinsUI() {
     coinsEl.textContent = playerCoins;
     shopCoinsEl.textContent = playerCoins;
   }
 
-  // === Начало игры ===
+  // Начало игры
   function startGame() {
     gameOver = false;
     scrollOffset = 0;
@@ -477,7 +456,7 @@
     requestAnimationFrame(gameLoop);
   }
 
-  // === Конец игры ===
+  // Конец игры
   function endGame() {
     finalScoreEl.textContent = coinsCount;
     finalCoinsEl.textContent = coinsCount;
@@ -486,7 +465,7 @@
     submitScore(coinsCount);
   }
 
-  // === Управление — прыжок по тапу ===
+  // Прыжок по тапу
   canvas.addEventListener('click', () => {
     if(gameOver) return;
     player.vy = player.jumpForce - (playerBoosts.jump || 0);
@@ -497,7 +476,7 @@
     player.vy = player.jumpForce - (playerBoosts.jump || 0);
   }, { passive: false });
 
-  // === Магазин ===
+  // Магазин
   function renderShop() {
     shopCoinsEl.textContent = playerCoins;
     skinsList.innerHTML = skins.map(skin => {
@@ -525,7 +504,7 @@
     }).join('');
   }
 
-  // === Покупки ===
+  // Покупки
   window.buySkin = function(id) {
     const skin = skins.find(s => s.id === id);
     if(playerCoins < skin.price) return alert('Недостаточно монет!');
@@ -550,7 +529,7 @@
     renderShop();
   }
 
-  // === Рейтинг ===
+  // Рейтинг
   function updateLeaderboardUI() {
     if(leaderboard.length === 0) {
       ratingList.textContent = 'Рейтинг пуст';
@@ -561,8 +540,11 @@
     ).join('<br>');
   }
 
-  // === Кнопки ===
-  restartGameBtn.onclick = startGame;
+  // Кнопки
+  restartGameBtn.onclick = () => {
+    startGame();
+    tg.MainButton.hide();
+  };
   goToMenuBtn1.onclick = () => {
     gameOverScreen.classList.remove('active');
     menu.classList.add('active');
@@ -583,14 +565,14 @@
   };
   closeRatingBtn.onclick = () => ratingScreen.classList.remove('active');
 
-  // === Инициализация ===
+  // Инициализация
   loadProgress();
   renderShop();
   updateCoinsUI();
-
 </script>
 </body>
 </html>
+
 
 
 
