@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const ratingList = document.getElementById('ratingList');
   const closeRatingBtn = document.getElementById('closeRatingBtn');
 
-  let player = { x: width/2 - 18, y: height - 140, width: 36, height: 36, vy: 0, vx: 0, gravity: 0.35, jumpForce: -10, skinId: 0 };
+  let player = { x: width/2 - 18, y: height - 140, width: 36, height: 36, vy: 0, vx: 0, gravity: 0.35, jumpForce: -10 };
   let platforms = [];
   const platformGap = 50;
   let scrollOffset = 0;
@@ -196,7 +196,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let ownedSkins = [0];
   let selectedSkin = 0;
   let playerBoosts = { jump: 0, coin: 0 };
-  let leaderboard = [];
 
   const skins = [
     { id: 0, name: 'Голубой', price: 0, color: '#00BFFF', img: null },
@@ -536,5 +535,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-
 
