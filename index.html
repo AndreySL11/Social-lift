@@ -122,7 +122,8 @@
 
 <div id="menu" class="screen active">
   <h2>Social Lift Jump</h2>
-  <button id="startGameBtn">Начать игру</button>
+  <!-- Кнопка запуска игры через Telegram WebApp MainButton -->
+  <p>Нажмите кнопку "Начать игру" внизу Telegram</p>
   <button id="openShopBtn">Магазин</button>
   <button id="openRatingBtn">Рейтинг</button>
 </div>
@@ -175,6 +176,14 @@
   const userName = tg.initDataUnsafe.user?.first_name || 'Гость';
   const userNick = tg.initDataUnsafe.user?.username || '';
 
+  // Используем Telegram MainButton для запуска игры
+  tg.MainButton.text = "Начать игру";
+  tg.MainButton.show();
+  tg.MainButton.onClick(() => {
+    startGame();
+    tg.MainButton.hide();
+  });
+
   // === DOM ===
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
@@ -184,7 +193,6 @@
   const scoreEl = document.getElementById('score');
   const coinsEl = document.getElementById('coins');
   const menu = document.getElementById('menu');
-  const startGameBtn = document.getElementById('startGameBtn');
   const openShopBtn = document.getElementById('openShopBtn');
   const openRatingBtn = document.getElementById('openRatingBtn');
   const gameOverScreen = document.getElementById('gameOverScreen');
@@ -218,17 +226,22 @@
   let playerBoosts = { jump: 0, coin: 0 };
   let leaderboard = [];
 
-  // === Скины ===
-  // Цветовые и с изображениями (замените ссылки на свои)
+  // === Скины (10 + секретный) ===
   const skins = [
-    { id: 0, name: 'Голубой', color: '#00BFFF', price: 0, img: null },
-    { id: 1, name: 'Белый', color: '#FFFFFF', price: 100, img: null },
-    { id: 2, name: 'Черный', color: '#000000', price: 100, img: null },
-    { id: 3, name: 'Утка', color: '#00BFFF', price: 250, img: 'https://i.imgur.com/7yUvePI.png' },
-    { id: 4, name: 'SL-бренд', color: '#00BFFF', price: 500, img: 'https://i.imgur.com/3qXQ9kK.png' }
+    { id: 0, name: 'Голубой', price: 0, color: '#00BFFF', img: null },
+    { id: 1, name: 'Белый', price: 100, color: '#FFFFFF', img: null },
+    { id: 2, name: 'Черный', price: 150, color: '#000000', img: null },
+    { id: 3, name: 'Красный', price: 200, color: '#FF0000', img: null },
+    { id: 4, name: 'Зелёный', price: 250, color: '#00FF00', img: null },
+    { id: 5, name: 'Оранжевый', price: 300, color: '#FFA500', img: null },
+    { id: 6, name: 'Розовый', price: 350, color: '#FFC0CB', img: null },
+    { id: 7, name: 'Фиолетовый', price: 400, color: '#800080', img: null },
+    { id: 8, name: 'Утка', price: 500, color: '#00BFFF', img: 'https://i.imgur.com/7yUvePI.png' },
+    { id: 9, name: 'SL-Бренд', price: 750, color: '#00BFFF', img: 'https://i.imgur.com/3qXQ9kK.png' },
+    { id: 10, name: 'Секретный', price: 0, color: '#FFD700', img: 'https://i.imgur.com/secretSkin.png' } // пример, замените
   ];
 
-  // === Усилители (бустеры) ===
+  // === Усилители ===
   const boosters = [
     { id: 'jump', name: 'Прыжок +2', price: 150, description: 'Увеличивает силу прыжка на 2' },
     { id: 'coin', name: 'Монеты x2', price: 200, description: 'Удваивает сбор монет' }
@@ -280,7 +293,7 @@
     }
   }
 
-  // === Загрузка прогресса из localStorage и Firebase ===
+  // === Загрузка прогресса ===
   function loadProgress() {
     const coinsLS = localStorage.getItem('playerCoins');
     if(coinsLS) playerCoins = parseInt(coinsLS);
@@ -290,6 +303,12 @@
     if(selectedSkinLS) selectedSkin = parseInt(selectedSkinLS);
     const boostsLS = localStorage.getItem('playerBoosts');
     if(boostsLS) playerBoosts = JSON.parse(boostsLS);
+
+    // Открываем секретный скин при достижении 100000 очков
+    if(parseInt(localStorage.getItem('bestScore') || '0') >= 100000 && !ownedSkins.includes(10)) {
+      ownedSkins.push(10);
+      alert('Поздравляем! Вы открыли секретный скин!');
+    }
 
     db.ref('leaderboard').orderByChild('score').limitToLast(10).once('value').then(snapshot => {
       leaderboard = [];
@@ -308,6 +327,8 @@
 
   // === Сохранение результата в Firebase ===
   function submitScore(score) {
+    const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
+    if(score > bestScore) localStorage.setItem('bestScore', score);
     db.ref('leaderboard/' + userId).set({
       username: userName,
       nickname: userNick,
@@ -487,10 +508,10 @@
       return `
         <div class="shop-item">
           <div class="skin-preview" style="${bgStyle}"></div>
-          <div>${skin.name}</div>
+          <div>${skin.name} ${skin.id === 10 ? '(секретный)' : ''}</div>
           <div>
             ${owned ? (selected ? '<b>Выбрано</b>' : `<button onclick="selectSkin(${skin.id})">Выбрать</button>`) 
-                    : `<button onclick="buySkin(${skin.id})">Купить (${skin.price} SL)</button>`}
+                    : (skin.id === 10 ? '<i>Доступен при 100000 очков</i>' : `<button onclick="buySkin(${skin.id})">Купить (${skin.price} SL)</button>`)}
           </div>
         </div>
       `;
