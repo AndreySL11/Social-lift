@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Social Lift Jump</title>
+<title>Social Lift Jump — Social Lift</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
   body, html {
@@ -18,11 +18,13 @@
     display: block;
     margin: 0 auto;
     background: #000;
-    border-radius: 12px;
-    box-shadow: 0 0 20px #00bfff;
+    border-radius: 16px;
+    box-shadow: 0 0 30px #00bfff;
     touch-action: none;
     max-width: 100vw;
     max-height: 80vh;
+    position: relative;
+    z-index: 1;
   }
   #ui {
     position: fixed;
@@ -48,7 +50,7 @@
     background-color: #00bfff;
     color: #000;
     margin: 8px;
-    box-shadow: 0 0 15px #00bfff88;
+    box-shadow: 0 0 20px #00bfffaa;
     user-select: none;
     pointer-events: auto;
     transition: background-color 0.3s ease;
@@ -64,18 +66,18 @@
     width: 320px;
     max-width: 95vw;
     padding: 20px;
-    background: rgba(0,0,0,0.9);
-    border-radius: 16px;
-    box-shadow: 0 0 30px #00bfffaa;
+    background: rgba(0,0,0,0.95);
+    border-radius: 20px;
+    box-shadow: 0 0 40px #00bfffcc;
     transform: translate(-50%, -50%);
     text-align: center;
-    display: none;
-    z-index: 1050;
+    color: #fff;
     user-select: none;
+    z-index: 1050;
+    display: none;
   }
   .screen.active {
     display: block;
-    pointer-events: auto;
   }
   .shop-item {
     display: flex;
@@ -86,13 +88,14 @@
     padding-bottom: 8px;
   }
   .skin-preview {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    margin-right: 10px;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    margin-right: 12px;
     background-size: cover;
     background-position: center;
     border: 2px solid #00BFFF;
+    flex-shrink: 0;
   }
   .boost-desc {
     font-size: 13px;
@@ -109,7 +112,9 @@
 </style>
 </head>
 <body>
+
 <canvas id="gameCanvas" width="320" height="480"></canvas>
+
 <div id="ui">
   <div>Высота: <span id="score">0</span> м</div>
   <div>Монеты SL: <span id="coins">0</span></div>
@@ -150,7 +155,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
 <script>
-  // Firebase конфиг — замените на свои данные
+  // === Firebase config (замените на свои данные) ===
   const firebaseConfig = {
     apiKey: "YOUR_API_KEY",
     authDomain: "YOUR_AUTH_DOMAIN",
@@ -163,14 +168,14 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  // Telegram WebApp API
+  // === Telegram WebApp API ===
   const tg = window.Telegram.WebApp;
   tg.expand();
   const userId = tg.initDataUnsafe.user?.id || Math.floor(Math.random()*1e9);
   const userName = tg.initDataUnsafe.user?.first_name || 'Гость';
   const userNick = tg.initDataUnsafe.user?.username || '';
 
-  // DOM элементы
+  // === DOM ===
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
   const width = canvas.width;
@@ -196,8 +201,8 @@
   const ratingList = document.getElementById('ratingList');
   const closeRatingBtn = document.getElementById('closeRatingBtn');
 
-  // Игровые переменные
-  let player = { x: width/2, y: height-140, width: 36, height: 36, vy: 0, vx: 0, gravity: 0.3, jumpForce: -10, color: '#00BFFF', skin: null };
+  // === Игровые переменные ===
+  let player = { x: width/2 - 18, y: height - 140, width: 36, height: 36, vy: 0, vx: 0, gravity: 0.35, jumpForce: -10, skinId: 0 };
   let platforms = [];
   const platformGap = 50;
   let scrollOffset = 0;
@@ -205,28 +210,31 @@
   let coinsCount = 0;
   let moveDir = 0;
   const speedX = 4;
+
+  // Прогресс игрока
   let playerCoins = 0;
   let ownedSkins = [0];
   let selectedSkin = 0;
   let playerBoosts = { jump: 0, coin: 0 };
   let leaderboard = [];
 
-  // Скины: цветовые и с изображениями (URL)
+  // === Скины ===
+  // Цветовые и с изображениями (замените ссылки на свои)
   const skins = [
     { id: 0, name: 'Голубой', color: '#00BFFF', price: 0, img: null },
     { id: 1, name: 'Белый', color: '#FFFFFF', price: 100, img: null },
     { id: 2, name: 'Черный', color: '#000000', price: 100, img: null },
-    { id: 3, name: 'Утка', color: '#00BFFF', price: 250, img: 'https://i.imgur.com/7yUvePI.png' }, // пример спрайт утки
-    { id: 4, name: 'SL-бренд', color: '#00BFFF', price: 500, img: 'https://i.imgur.com/3qXQ9kK.png' } // пример фирменный скин
+    { id: 3, name: 'Утка', color: '#00BFFF', price: 250, img: 'https://i.imgur.com/7yUvePI.png' },
+    { id: 4, name: 'SL-бренд', color: '#00BFFF', price: 500, img: 'https://i.imgur.com/3qXQ9kK.png' }
   ];
 
-  // Усилители
+  // === Усилители (бустеры) ===
   const boosters = [
     { id: 'jump', name: 'Прыжок +2', price: 150, description: 'Увеличивает силу прыжка на 2' },
     { id: 'coin', name: 'Монеты x2', price: 200, description: 'Удваивает сбор монет' }
   ];
 
-  // Платформа
+  // === Класс платформы ===
   class Platform {
     constructor(x, y, w, h, type='static') {
       this.x = x;
@@ -272,9 +280,8 @@
     }
   }
 
-  // Загрузка прогресса из localStorage и Firebase
+  // === Загрузка прогресса из localStorage и Firebase ===
   function loadProgress() {
-    // localStorage
     const coinsLS = localStorage.getItem('playerCoins');
     if(coinsLS) playerCoins = parseInt(coinsLS);
     const ownedSkinsLS = localStorage.getItem('ownedSkins');
@@ -284,7 +291,6 @@
     const boostsLS = localStorage.getItem('playerBoosts');
     if(boostsLS) playerBoosts = JSON.parse(boostsLS);
 
-    // Firebase leaderboard
     db.ref('leaderboard').orderByChild('score').limitToLast(10).once('value').then(snapshot => {
       leaderboard = [];
       snapshot.forEach(child => leaderboard.unshift(child.val()));
@@ -292,7 +298,7 @@
     });
   }
 
-  // Сохранение прогресса
+  // === Сохранение прогресса ===
   function saveProgress() {
     localStorage.setItem('playerCoins', playerCoins);
     localStorage.setItem('ownedSkins', JSON.stringify(ownedSkins));
@@ -300,7 +306,7 @@
     localStorage.setItem('playerBoosts', JSON.stringify(playerBoosts));
   }
 
-  // Сохранение результата в Firebase
+  // === Сохранение результата в Firebase ===
   function submitScore(score) {
     db.ref('leaderboard/' + userId).set({
       username: userName,
@@ -309,7 +315,7 @@
     });
   }
 
-  // Обновление рейтинга UI
+  // === Обновление рейтинга UI ===
   function updateLeaderboardUI() {
     if(leaderboard.length === 0) {
       ratingList.textContent = 'Рейтинг пуст';
@@ -320,7 +326,7 @@
     ).join('<br>');
   }
 
-  // Создание платформ
+  // === Создание платформ ===
   function createPlatforms() {
     platforms = [];
     platforms.push(new Platform(width/2 - 50, height - 100, 100, 15, 'static'));
@@ -333,29 +339,30 @@
     }
   }
 
-  // Отрисовка игрока с выбранным скином
+  // === Отрисовка игрока с выбранным скином ===
   function drawPlayer() {
-    if(skins[selectedSkin].img) {
-      const img = new Image();
-      img.src = skins[selectedSkin].img;
-      ctx.drawImage(img, player.x, player.y, player.width, player.height);
+    const skin = skins.find(s => s.id === selectedSkin);
+    if(skin && skin.img) {
+      if(!skin._img) {
+        skin._img = new Image();
+        skin._img.src = skin.img;
+      }
+      ctx.drawImage(skin._img, player.x, player.y, player.width, player.height);
     } else {
-      ctx.fillStyle = skins[selectedSkin].color;
+      ctx.fillStyle = skin ? skin.color : '#00BFFF';
       ctx.fillRect(player.x, player.y, player.width, player.height);
     }
   }
 
-  // Обновление игрока
+  // === Обновление игрока ===
   function updatePlayer() {
     player.vy += player.gravity;
     player.y += player.vy;
     player.x += player.vx;
 
-    // Горизонтальный перенос
     if(player.x + player.width < 0) player.x = width;
     else if(player.x > width) player.x = -player.width;
 
-    // Коллизии с платформами
     for(let plat of platforms) {
       if(
         player.vy > 0 &&
@@ -378,35 +385,33 @@
       }
     }
 
-    // Проверка падения
     if(player.y > height) {
       gameOver = true;
       endGame();
     }
   }
 
-  // Обновление платформ
+  // === Обновление платформ ===
   function updatePlatforms() {
     for(let plat of platforms) {
       plat.update();
     }
   }
 
-  // Отрисовка платформ
+  // === Отрисовка платформ ===
   function drawPlatforms() {
     for(let plat of platforms) {
       plat.draw(ctx);
     }
   }
 
-  // Игровой цикл
+  // === Игровой цикл ===
   function gameLoop() {
     if(gameOver) return;
     ctx.clearRect(0, 0, width, height);
     updatePlayer();
     updatePlatforms();
 
-    // Скролл камеры
     if(player.y < height/2) {
       let diff = (height/2) - player.y;
       player.y += diff;
@@ -424,22 +429,23 @@
     requestAnimationFrame(gameLoop);
   }
 
-  // Обновление UI монет
+  // === Обновление UI монет ===
   function updateCoinsUI() {
     coinsEl.textContent = playerCoins;
     shopCoinsEl.textContent = playerCoins;
   }
 
-  // Начало игры
+  // === Начало игры ===
   function startGame() {
     gameOver = false;
     scrollOffset = 0;
     coinsCount = 0;
-    player.x = width/2;
+    player.x = width/2 - 18;
     player.y = height - 140;
     player.vx = 0;
     player.vy = 0;
-    player.color = skins[selectedSkin].color;
+    player.gravity = 0.35;
+    player.jumpForce = -10;
     createPlatforms();
     updateCoinsUI();
     scoreEl.textContent = '0';
@@ -451,7 +457,7 @@
     requestAnimationFrame(gameLoop);
   }
 
-  // Конец игры
+  // === Конец игры ===
   function endGame() {
     finalScoreEl.textContent = coinsCount;
     finalCoinsEl.textContent = coinsCount;
@@ -460,7 +466,7 @@
     submitScore(coinsCount);
   }
 
-  // Обработка тапов — прыжок в стиле Doodle Jump
+  // === Управление — прыжок по тапу ===
   canvas.addEventListener('click', () => {
     if(gameOver) return;
     player.vy = player.jumpForce - (playerBoosts.jump || 0);
@@ -471,10 +477,9 @@
     player.vy = player.jumpForce - (playerBoosts.jump || 0);
   }, { passive: false });
 
-  // Магазин
+  // === Магазин ===
   function renderShop() {
     shopCoinsEl.textContent = playerCoins;
-    // Скины
     skinsList.innerHTML = skins.map(skin => {
       const owned = ownedSkins.includes(skin.id);
       const selected = selectedSkin === skin.id;
@@ -490,7 +495,6 @@
         </div>
       `;
     }).join('');
-    // Усилители
     boostersList.innerHTML = boosters.map(b => {
       return `
         <div class="shop-item">
@@ -501,7 +505,7 @@
     }).join('');
   }
 
-  // Покупки
+  // === Покупки ===
   window.buySkin = function(id) {
     const skin = skins.find(s => s.id === id);
     if(playerCoins < skin.price) return alert('Недостаточно монет!');
@@ -526,7 +530,7 @@
     renderShop();
   }
 
-  // Рейтинг
+  // === Рейтинг ===
   function updateLeaderboardUI() {
     if(leaderboard.length === 0) {
       ratingList.textContent = 'Рейтинг пуст';
@@ -537,7 +541,7 @@
     ).join('<br>');
   }
 
-  // Кнопки
+  // === Кнопки ===
   startGameBtn.onclick = startGame;
   restartGameBtn.onclick = startGame;
   goToMenuBtn1.onclick = () => {
@@ -559,7 +563,7 @@
   };
   closeRatingBtn.onclick = () => ratingScreen.classList.remove('active');
 
-  // Инициализация
+  // === Инициализация ===
   loadProgress();
   renderShop();
   updateCoinsUI();
