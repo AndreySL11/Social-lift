@@ -155,7 +155,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
   // Firebase config - замените на свои данные
   const firebaseConfig = {
     apiKey: "YOUR_API_KEY",
@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const userName = tg.initDataUnsafe.user?.first_name || 'Гость';
   const userNick = tg.initDataUnsafe.user?.username || '';
 
-  // Используем Telegram MainButton для запуска игры
+  // Telegram MainButton для запуска игры
   tg.MainButton.text = "Начать игру";
   tg.MainButton.show();
   tg.MainButton.onClick(() => {
@@ -525,7 +525,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }).join('');
   }
 
-  // Покупки и выбор скинов/бустеров через делегирование
+  // Делегирование событий для магазина
   skinsList.addEventListener('click', e => {
     if(e.target.tagName === 'BUTTON') {
       const id = parseInt(e.target.getAttribute('data-id'));
@@ -596,9 +596,9 @@ document.addEventListener('DOMContentLoaded', function() {
   loadProgress();
   renderShop();
   updateCoinsUI();
+});
 </script>
 </body>
 </html>
-
 
 
