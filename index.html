@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Social Lift Jump — Улучшенная версия</title>
+<title>Social Lift Jump</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
   body, html {
@@ -174,19 +174,6 @@
     justify-content: center;
     font-weight: bold;
   }
-  @media (min-width: 500px) {
-    button {
-      font-size: 18px;
-      padding: 14px 28px;
-    }
-    #ui {
-      font-size: 18px;
-    }
-    .skin-preview {
-      width: 60px;
-      height: 60px;
-    }
-  }
 </style>
 </head>
 <body>
@@ -236,11 +223,12 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // Адаптивное разрешение
+  // Инициализация игры
   const gameContainer = document.getElementById('gameContainer');
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
   
+  // Установка размеров canvas
   function resizeCanvas() {
     const isPortrait = window.innerHeight > window.innerWidth;
     const maxWidth = Math.min(window.innerWidth, 500);
@@ -284,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const closeRatingBtn = document.getElementById('closeRatingBtn');
   const playerStats = document.getElementById('playerStats');
 
-  // Переменные игры
+  // Игровые переменные
   let player = { 
     x: width/2 - 18, 
     y: height - 140, 
@@ -312,39 +300,31 @@ document.addEventListener('DOMContentLoaded', () => {
   let totalJumps = parseInt(localStorage.getItem('totalJumps')) || 0;
   let totalDistance = parseInt(localStorage.getItem('totalDistance')) || 0;
   let gamesPlayed = parseInt(localStorage.getItem('gamesPlayed')) || 0;
+  let isTouching = false;
+  let touchStartX = 0;
 
-  // Система скинов (исправленная)
+  // Скины
   const skins = [
-    { id: 0, name: 'Голубой', price: 0, color: '#00BFFF' },
-    { id: 1, name: 'Белый', price: 100, color: '#FFFFFF' },
-    { id: 2, name: 'Черный', price: 150, color: '#000000' },
-    { id: 3, name: 'Красный', price: 200, color: '#FF0000' },
-    { id: 4, name: 'Зелёный', price: 250, color: '#00FF00' },
-    { id: 5, name: 'Оранжевый', price: 300, color: '#FFA500' },
-    { id: 6, name: 'Розовый', price: 350, color: '#FFC0CB' },
-    { id: 7, name: 'Фиолетовый', price: 400, color: '#800080' },
-    { id: 8, name: 'Золотой', price: 500, color: '#FFD700' },
-    { id: 9, name: 'Серебряный', price: 450, color: '#C0C0C0' },
+    { id: 0, name: 'Голубой', price: 0, color: '#00BFFF', isDuck: true },
+    { id: 1, name: 'Белый', price: 100, color: '#FFFFFF', isDuck: true },
+    { id: 2, name: 'Черный', price: 150, color: '#000000', isDuck: true },
+    { id: 3, name: 'Красный', price: 200, color: '#FF0000', isDuck: true },
+    { id: 4, name: 'Зелёный', price: 250, color: '#00FF00', isDuck: true },
+    { id: 5, name: 'Оранжевый', price: 300, color: '#FFA500', isDuck: true },
+    { id: 6, name: 'Розовый', price: 350, color: '#FFC0CB', isDuck: true },
+    { id: 7, name: 'Фиолетовый', price: 400, color: '#800080', isDuck: true },
+    { id: 8, name: 'Золотой', price: 500, color: '#FFD700', isDuck: true },
+    { id: 9, name: 'Серебряный', price: 450, color: '#C0C0C0', isDuck: true },
     { id: 10, name: 'Утка', price: 500, color: '#FFD700', isDuck: true },
-    { id: 11, name: 'Космонавт', price: 800, color: '#FFFFFF', img: 'https://i.imgur.com/JqYeZQp.png' },
-    { id: 12, name: 'Ниндзя', price: 700, color: '#000000', img: 'https://i.imgur.com/nKQeYqW.png' },
-    { id: 13, name: 'Секретный', price: 0, color: '#FFD700', img: null, unlockScore: 5000, isDuck: true }
+    { id: 11, name: 'Секретный', price: 0, color: '#FFD700', isDuck: true, unlockScore: 5000 }
   ];
-
-  // Предзагрузка изображений скинов
-  skins.forEach(skin => {
-    if (skin.img) {
-      skin._img = new Image();
-      skin._img.src = skin.img;
-    }
-  });
 
   const boosters = [
     { id: 'jump', name: 'Прыжок +2', price: 150, description: 'Увеличивает силу прыжка на 2' },
-    { id: 'coin', name: 'Монеты x2', price: 200, description: 'Удваивает сбор монет' },
-    { id: 'gravity', name: 'Антигравитация', price: 300, description: 'Уменьшает гравитацию на 30%' }
+    { id: 'coin', name: 'Монеты x2', price: 200, description: 'Удваивает сбор монет' }
   ];
 
+  // Класс платформы
   class Platform {
     constructor(x, y, w, h, type='static') {
       this.x = x;
@@ -362,6 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
       this.visible = true;
       this.disappearTimer = 0;
     }
+    
     update() {
       if(this.type === 'moving') {
         this.x += this.moveSpeed * this.moveDir;
@@ -376,6 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     }
+    
     draw(ctx) {
       if(!this.visible) return;
       ctx.fillStyle = this.type === 'breaking' ? '#ff6600' : '#00BFFF';
@@ -411,6 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
       speed: (Math.random()*0.3)+0.05
     });
   }
+  
   function drawStars() {
     ctx.fillStyle = '#fff';
     stars.forEach(s => {
@@ -422,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Отрисовка игрока (утка)
+  // Отрисовка утки
   function drawDuck(x, y, w, h) {
     const scale = w / 8;
     ctx.save();
@@ -468,9 +451,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function drawPlayer() {
     const skin = skins.find(s => s.id === selectedSkin);
     
-    if(skin && skin.img && skin._img && skin._img.complete) {
-      ctx.drawImage(skin._img, player.x, player.y, player.width, player.height);
-    } else if (skin && skin.isDuck) {
+    if (skin && skin.isDuck) {
+      ctx.fillStyle = skin.color || '#FFD700';
       drawDuck(player.x, player.y, player.width, player.height);
     } else if (skin && skin.color) {
       ctx.fillStyle = skin.color;
@@ -481,69 +463,68 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Управление как в Doodle Jump (нажатие по экрану)
-  let touchStartX = 0;
-  let isTouching = false;
-  
-  // Обработка касаний
-  canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    if(gameOver) {
-      startGame();
-      return;
-    }
-    isTouching = true;
-    touchStartX = e.touches[0].clientX;
-    player.lastTouchX = touchStartX;
-    player.vy = player.jumpForce - (playerBoosts.jump || 0);
-    totalJumps++;
-  });
-  
-  canvas.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-    if(isTouching) {
-      const touchX = e.touches[0].clientX;
-      player.lastTouchX = touchX;
-    }
-  });
-  
-  canvas.addEventListener('touchend', (e) => {
-    e.preventDefault();
-    isTouching = false;
-  });
-  
-  // Обработка кликов мышью
-  canvas.addEventListener('mousedown', (e) => {
-    if(gameOver) {
-      startGame();
-      return;
-    }
-    isTouching = true;
-    touchStartX = e.clientX;
-    player.lastTouchX = touchStartX;
-    player.vy = player.jumpForce - (playerBoosts.jump || 0);
-    totalJumps++;
-  });
-  
-  canvas.addEventListener('mousemove', (e) => {
-    if(isTouching) {
-      player.lastTouchX = e.clientX;
-    }
-  });
-  
-  canvas.addEventListener('mouseup', () => {
-    isTouching = false;
-  });
-  
-  canvas.addEventListener('mouseleave', () => {
-    isTouching = false;
-  });
-  
+  // Управление (как в Doodle Jump)
+  function setupControls() {
+    // Сенсорное управление
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if(gameOver) {
+        startGame();
+        return;
+      }
+      isTouching = true;
+      touchStartX = e.touches[0].clientX;
+      player.lastTouchX = touchStartX;
+      player.vy = player.jumpForce - (playerBoosts.jump || 0);
+      totalJumps++;
+    });
+    
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if(isTouching) {
+        const touchX = e.touches[0].clientX;
+        player.lastTouchX = touchX;
+      }
+    });
+    
+    canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      isTouching = false;
+    });
+    
+    // Управление мышью
+    canvas.addEventListener('mousedown', (e) => {
+      if(gameOver) {
+        startGame();
+        return;
+      }
+      isTouching = true;
+      touchStartX = e.clientX;
+      player.lastTouchX = touchStartX;
+      player.vy = player.jumpForce - (playerBoosts.jump || 0);
+      totalJumps++;
+    });
+    
+    canvas.addEventListener('mousemove', (e) => {
+      if(isTouching) {
+        player.lastTouchX = e.clientX;
+      }
+    });
+    
+    canvas.addEventListener('mouseup', () => {
+      isTouching = false;
+    });
+    
+    canvas.addEventListener('mouseleave', () => {
+      isTouching = false;
+    });
+  }
+
   // Плавное управление с инерцией
   function handleMovement() {
     const acceleration = 0.2;
     const deceleration = 0.15;
-    const maxSpeed = 5 + (playerBoosts.speed || 0);
+    const maxSpeed = 5;
     
     // Определяем целевое направление на основе последнего касания
     if(isTouching) {
@@ -715,12 +696,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const owned = ownedSkins.includes(skin.id);
       const selected = selectedSkin === skin.id;
       const canUnlock = skin.unlockScore ? coinsCount >= skin.unlockScore : true;
-      const bgStyle = skin.img ? `background-image:url(${skin.img});` : 
-                     `background-color:${skin.color};`;
+      const bgStyle = skin.color ? `background-color:${skin.color};` : '';
       return `
         <div class="shop-item">
           <div class="skin-preview" style="${bgStyle}">
-            ${skin.isDuck ? '🦆' : skin.img ? '' : '👤'}
+            ${skin.isDuck ? '🦆' : '👤'}
           </div>
           <div class="skin-name">${skin.name}</div>
           ${skin.unlockScore ? `<div>От ${skin.unlockScore} очков</div>` : `<div class="skin-price">${skin.price} SL</div>`}
@@ -743,20 +723,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }).join('');
   }
   
-  skinsList.addEventListener('click', e => {
-    if(e.target.tagName === 'BUTTON') {
-      const id = parseInt(e.target.getAttribute('data-id'));
-      if(e.target.textContent.includes('Купить') || e.target.textContent.includes('Разблокировать')) buySkin(id);
-      else if(e.target.textContent.includes('Выбрать')) selectSkin(id);
-    }
-  });
-  
-  boostersList.addEventListener('click', e => {
-    if(e.target.tagName === 'BUTTON') {
-      const id = e.target.getAttribute('data-id');
-      buyBooster(id);
-    }
-  });
+  function setupShopEvents() {
+    skinsList.addEventListener('click', e => {
+      if(e.target.tagName === 'BUTTON') {
+        const id = parseInt(e.target.getAttribute('data-id'));
+        if(e.target.textContent.includes('Купить') || e.target.textContent.includes('Разблокировать')) buySkin(id);
+        else if(e.target.textContent.includes('Выбрать')) selectSkin(id);
+      }
+    });
+    
+    boostersList.addEventListener('click', e => {
+      if(e.target.tagName === 'BUTTON') {
+        const id = e.target.getAttribute('data-id');
+        buyBooster(id);
+      }
+    });
+  }
   
   function buySkin(id) {
     const skin = skins.find(s => s.id === id);
@@ -795,7 +777,6 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('gamesPlayed', gamesPlayed);
     
     let localLeaderboard = JSON.parse(localStorage.getItem('localLeaderboard') || '[]');
-    // Добавляем текущий результат только если он лучше предыдущего
     const lastScore = localLeaderboard.find(item => item.name === playerName)?.score || 0;
     if(coinsCount > lastScore) {
       localLeaderboard = localLeaderboard.filter(item => item.name !== playerName);
@@ -813,9 +794,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Обновлённый рейтинг
+  // Рейтинг
   function renderRating() {
-    const localLeaderboard = JSON.parse(localStorage.getItem('localLeaderboard') || [];
+    const localLeaderboard = JSON.parse(localStorage.getItem('localLeaderboard') || '[]');
     const currentPlayerStats = {
       name: playerName,
       score: coinsCount,
@@ -845,7 +826,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="rating-item" style="${isCurrent ? 'background: rgba(0, 191, 255, 0.3);' : ''}">
             <div class="rating-position">${index+1}</div>
             <div class="rating-avatar" style="background-color: ${skins.find(s => s.id === player.avatar)?.color || '#00BFFF'}">
-              ${player.avatar === 10 ? '🦆' : player.avatar === 11 ? '👨‍🚀' : player.avatar === 12 ? '🥷' : '👤'}
+              ${player.avatar === 10 || player.avatar === 11 ? '🦆' : '👤'}
             </div>
             <div class="rating-name">${player.name}${isCurrent ? ' (Вы)' : ''}</div>
             <div class="rating-score">${player.score} м</div>
@@ -855,42 +836,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Обработчики кнопок
-  startGameBtn.addEventListener('click', startGame);
-  restartGameBtn.addEventListener('click', startGame);
-  goToMenuBtn1.addEventListener('click', () => {
-    gameOverScreen.classList.remove('active');
-    menu.classList.add('active');
-  });
-  openShopBtn.addEventListener('click', () => {
-    renderShop();
-    shopScreen.classList.add('active');
-  });
-  closeShopBtn.addEventListener('click', () => {
-    shopScreen.classList.remove('active');
-  });
-  openRatingBtn.addEventListener('click', () => {
-    renderRating();
-    ratingScreen.classList.add('active');
-  });
-  closeRatingBtn.addEventListener('click', () => {
-    ratingScreen.classList.remove('active');
-  });
-
-  // Стартовый экран-заставка
-  setTimeout(() => {
-    splashScreen.style.display = 'none';
-    menu.classList.add('active');
-  }, 2000);
-  
-  // Запрос имени игрока при первом запуске
-  if(!localStorage.getItem('playerName')) {
-    setTimeout(() => {
-      const name = prompt('Введите ваше имя:', 'Игрок') || 'Игрок';
-      playerName = name;
-      localStorage.setItem('playerName', name);
-    }, 2200);
+  // Настройка кнопок
+  function setupButtons() {
+    startGameBtn.addEventListener('click', startGame);
+    restartGameBtn.addEventListener('click', startGame);
+    goToMenuBtn1.addEventListener('click', () => {
+      gameOverScreen.classList.remove('active');
+      menu.classList.add('active');
+    });
+    openShopBtn.addEventListener('click', () => {
+      renderShop();
+      shopScreen.classList.add('active');
+    });
+    closeShopBtn.addEventListener('click', () => {
+      shopScreen.classList.remove('active');
+    });
+    openRatingBtn.addEventListener('click', () => {
+      renderRating();
+      ratingScreen.classList.add('active');
+    });
+    closeRatingBtn.addEventListener('click', () => {
+      ratingScreen.classList.remove('active');
+    });
   }
+
+  // Инициализация игры
+  function initGame() {
+    setupControls();
+    setupShopEvents();
+    setupButtons();
+    
+    // Запрос имени игрока при первом запуске
+    if(!localStorage.getItem('playerName')) {
+      setTimeout(() => {
+        const name = prompt('Введите ваше имя:', 'Игрок') || 'Игрок';
+        playerName = name;
+        localStorage.setItem('playerName', name);
+      }, 2200);
+    }
+    
+    // Скрытие заставки через 2 секунды
+    setTimeout(() => {
+      splashScreen.style.display = 'none';
+      menu.classList.add('active');
+    }, 2000);
+  }
+
+  // Запуск игры
+  initGame();
 });
 </script>
 </body>
