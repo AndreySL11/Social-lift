@@ -174,31 +174,6 @@
     justify-content: center;
     font-weight: bold;
   }
-  .controls {
-    position: absolute;
-    bottom: 20px;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    z-index: 5;
-    pointer-events: none;
-  }
-  .control-btn {
-    width: 60px;
-    height: 60px;
-    background: rgba(0, 191, 255, 0.3);
-    border-radius: 50%;
-    margin: 0 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 24px;
-    color: white;
-    pointer-events: auto;
-    touch-action: manipulation;
-    border: 2px solid rgba(255, 255, 255, 0.5);
-    box-shadow: 0 0 15px rgba(0, 191, 255, 0.5);
-  }
 </style>
 </head>
 <body>
@@ -211,11 +186,6 @@
   <div id="ui">
     <div>Высота: <span id="score">0</span> м</div>
     <div>Монеты: <span id="coins">0</span></div>
-  </div>
-  
-  <div class="controls">
-    <div class="control-btn" id="leftBtn">←</div>
-    <div class="control-btn" id="rightBtn">→</div>
   </div>
 </div>
 
@@ -301,8 +271,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const ratingList = document.getElementById('ratingList');
   const closeRatingBtn = document.getElementById('closeRatingBtn');
   const playerStats = document.getElementById('playerStats');
-  const leftBtn = document.getElementById('leftBtn');
-  const rightBtn = document.getElementById('rightBtn');
 
   // Игровые переменные
   let player = { 
@@ -315,7 +283,8 @@ document.addEventListener('DOMContentLoaded', () => {
     gravity: 0.35, 
     jumpForce: -10, 
     speedX: 0,
-    targetSpeedX: 0
+    targetSpeedX: 0,
+    lastTouchX: 0
   };
   
   let platforms = [];
@@ -331,8 +300,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let totalJumps = parseInt(localStorage.getItem('totalJumps')) || 0;
   let totalDistance = parseInt(localStorage.getItem('totalDistance')) || 0;
   let gamesPlayed = parseInt(localStorage.getItem('gamesPlayed')) || 0;
-  let leftPressed = false;
-  let rightPressed = false;
+  let isTouching = false;
+  let touchStartX = 0;
 
   // Система скинов
   const skins = [
@@ -342,7 +311,8 @@ document.addEventListener('DOMContentLoaded', () => {
       price: 0, 
       color: '#FFD700',
       type: 'duck',
-      preview: '🦆'
+      preview: '🦆',
+      description: 'Классическая жёлтая утка'
     },
     { 
       id: 1, 
@@ -350,7 +320,8 @@ document.addEventListener('DOMContentLoaded', () => {
       price: 100, 
       color: '#FFFFFF',
       type: 'duck',
-      preview: '🦆'
+      preview: '🦆',
+      description: 'Элегантная белая утка'
     },
     { 
       id: 2, 
@@ -358,7 +329,8 @@ document.addEventListener('DOMContentLoaded', () => {
       price: 150, 
       color: '#000000',
       type: 'duck',
-      preview: '🦆'
+      preview: '🦆',
+      description: 'Стильная чёрная утка'
     },
     { 
       id: 3, 
@@ -366,7 +338,8 @@ document.addEventListener('DOMContentLoaded', () => {
       price: 200, 
       color: '#AAAAAA',
       type: 'robot',
-      preview: '🤖'
+      preview: '🤖',
+      description: 'Механический помощник'
     },
     { 
       id: 4, 
@@ -374,7 +347,8 @@ document.addEventListener('DOMContentLoaded', () => {
       price: 250, 
       color: '#FFFFFF',
       type: 'astronaut',
-      preview: '👨‍🚀'
+      preview: '👨‍🚀',
+      description: 'Покоритель космоса'
     },
     { 
       id: 5, 
@@ -382,7 +356,8 @@ document.addEventListener('DOMContentLoaded', () => {
       price: 300, 
       color: '#000000',
       type: 'ninja',
-      preview: '🥷'
+      preview: '🥷',
+      description: 'Теневой воин'
     },
     { 
       id: 6, 
@@ -390,7 +365,8 @@ document.addEventListener('DOMContentLoaded', () => {
       price: 350, 
       color: '#FFA500',
       type: 'cat',
-      preview: '🐱'
+      preview: '🐱',
+      description: 'Ловкий и грациозный'
     },
     { 
       id: 7, 
@@ -398,7 +374,8 @@ document.addEventListener('DOMContentLoaded', () => {
       price: 400, 
       color: '#8B4513',
       type: 'dog',
-      preview: '🐶'
+      preview: '🐶',
+      description: 'Верный друг'
     },
     { 
       id: 8, 
@@ -406,7 +383,8 @@ document.addEventListener('DOMContentLoaded', () => {
       price: 500, 
       color: '#FFD700',
       type: 'duck',
-      preview: '🦆'
+      preview: '🦆',
+      description: 'Роскошная золотая утка'
     },
     { 
       id: 9, 
@@ -414,7 +392,8 @@ document.addEventListener('DOMContentLoaded', () => {
       price: 600, 
       color: '#7CFC00',
       type: 'alien',
-      preview: '👽'
+      preview: '👽',
+      description: 'Инопланетный гость'
     },
     { 
       id: 10, 
@@ -422,23 +401,17 @@ document.addEventListener('DOMContentLoaded', () => {
       price: 750, 
       color: '#FF4500',
       type: 'dragon',
-      preview: '🐉'
+      preview: '🐲',
+      description: 'Могучий дракон'
     },
     { 
       id: 11, 
-      name: 'Единорог', 
-      price: 800, 
-      color: '#FF69B4',
-      type: 'unicorn',
-      preview: '🦄'
-    },
-    { 
-      id: 12, 
       name: 'Секретный агент', 
       price: 0, 
       color: '#000000',
       type: 'agent',
       preview: '🕵️',
+      description: 'Разблокируется при 5000 очков',
       unlockScore: 5000
     }
   ];
@@ -534,527 +507,253 @@ document.addEventListener('DOMContentLoaded', () => {
     const skin = skins.find(s => s.id === selectedSkin) || skins[0];
     ctx.fillStyle = skin.color;
     
+    // Общая функция для рисования базовой формы (используется для всех скинов)
+    function drawBase() {
+      // Тело
+      ctx.beginPath();
+      ctx.ellipse(player.x + player.width/2, player.y + player.height/2, 
+                 player.width/2, player.height/3, 0, 0, Math.PI*2);
+      ctx.fill();
+      
+      // Голова
+      ctx.beginPath();
+      ctx.arc(player.x + player.width/2, player.y + player.height/4, 
+             player.width/4, 0, Math.PI*2);
+      ctx.fill();
+    }
+    
+    // Рисуем базовую форму
+    drawBase();
+    
+    // Детали для каждого типа скина
     switch(skin.type) {
       case 'duck':
-        drawDuck(player.x, player.y, player.width, player.height);
+        drawDuckDetails();
         break;
       case 'robot':
-        drawRobot(player.x, player.y, player.width, player.height);
+        drawRobotDetails();
         break;
       case 'astronaut':
-        drawAstronaut(player.x, player.y, player.width, player.height);
+        drawAstronautDetails();
         break;
       case 'ninja':
-        drawNinja(player.x, player.y, player.width, player.height);
+        drawNinjaDetails();
         break;
       case 'cat':
-        drawCat(player.x, player.y, player.width, player.height);
+        drawCatDetails();
         break;
       case 'dog':
-        drawDog(player.x, player.y, player.width, player.height);
+        drawDogDetails();
         break;
       case 'alien':
-        drawAlien(player.x, player.y, player.width, player.height);
+        drawAlienDetails();
         break;
       case 'dragon':
-        drawDragon(player.x, player.y, player.width, player.height);
-        break;
-      case 'unicorn':
-        drawUnicorn(player.x, player.y, player.width, player.height);
+        drawDragonDetails();
         break;
       case 'agent':
-        drawAgent(player.x, player.y, player.width, player.height);
+        drawAgentDetails();
         break;
-      default:
-        drawDuck(player.x, player.y, player.width, player.height);
     }
-  }
-
-  // Рисуем утку
-  function drawDuck(x, y, w, h) {
-    const scale = w / 8;
-    ctx.save();
-    ctx.translate(x, y);
     
-    // Тело
-    ctx.beginPath();
-    ctx.ellipse(scale*4, scale*4, scale*3, scale*2, 0, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Голова
-    ctx.beginPath();
-    ctx.arc(scale*6, scale*2, scale*1.5, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Глаз
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.arc(scale*6.5, scale*1.7, scale*0.4, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Клюв
-    ctx.fillStyle = '#FFA500';
-    ctx.beginPath();
-    ctx.moveTo(scale*7.5, scale*2);
-    ctx.lineTo(scale*8, scale*1.8);
-    ctx.lineTo(scale*7.5, scale*2.2);
-    ctx.closePath();
-    ctx.fill();
-    
-    // Крыло
-    ctx.fillStyle = '#E6C200';
-    ctx.beginPath();
-    ctx.moveTo(scale*3, scale*4);
-    ctx.quadraticCurveTo(scale*2, scale*3, scale*3, scale*2);
-    ctx.quadraticCurveTo(scale*4, scale*3, scale*3, scale*4);
-    ctx.fill();
-    
-    ctx.restore();
-  }
-
-  // Рисуем робота
-  function drawRobot(x, y, w, h) {
-    const scale = w / 8;
-    ctx.save();
-    ctx.translate(x, y);
-    
-    // Тело
-    ctx.fillRect(scale*2, scale*2, scale*4, scale*4);
-    
-    // Голова
-    ctx.fillRect(scale*3, scale*0, scale*2, scale*2);
-    
-    // Глаза
-    ctx.fillStyle = '#FF0000';
-    ctx.fillRect(scale*3.2, scale*0.5, scale*0.6, scale*0.6);
-    ctx.fillRect(scale*4.2, scale*0.5, scale*0.6, scale*0.6);
-    
-    // Руки
-    ctx.fillStyle = ctx.fillStyle;
-    ctx.fillRect(scale*1, scale*3, scale*1, scale*2);
-    ctx.fillRect(scale*6, scale*3, scale*1, scale*2);
-    
-    // Ноги
-    ctx.fillRect(scale*2.5, scale*6, scale*1, scale*2);
-    ctx.fillRect(scale*4.5, scale*6, scale*1, scale*2);
-    
-    ctx.restore();
-  }
-
-  // Рисуем космонавта
-  function drawAstronaut(x, y, w, h) {
-    const scale = w / 8;
-    ctx.save();
-    ctx.translate(x, y);
-    
-    // Шлем
-    ctx.beginPath();
-    ctx.arc(scale*4, scale*3, scale*3, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Визор
-    ctx.fillStyle = '#87CEEB';
-    ctx.beginPath();
-    ctx.arc(scale*4, scale*3, scale*2, 0, Math.PI);
-    ctx.fill();
-    
-    // Тело
-    ctx.fillStyle = ctx.fillStyle;
-    ctx.fillRect(scale*2.5, scale*5, scale*3, scale*3);
-    
-    // Ноги
-    ctx.fillRect(scale*2.5, scale*8, scale*1, scale*2);
-    ctx.fillRect(scale*4.5, scale*8, scale*1, scale*2);
-    
-    // Руки
-    ctx.fillRect(scale*1, scale*5, scale*1.5, scale*2);
-    ctx.fillRect(scale*5.5, scale*5, scale*1.5, scale*2);
-    
-    ctx.restore();
-  }
-
-  // Рисуем ниндзя
-  function drawNinja(x, y, w, h) {
-    const scale = w / 8;
-    ctx.save();
-    ctx.translate(x, y);
-    
-    // Тело
-    ctx.fillRect(scale*2, scale*2, scale*4, scale*5);
-    
-    // Голова
-    ctx.fillStyle = '#333';
-    ctx.beginPath();
-    ctx.arc(scale*4, scale*2, scale*1.5, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Глаза
-    ctx.fillStyle = '#FF0000';
-    ctx.fillRect(scale*3.2, scale*1.5, scale*0.6, scale*0.4);
-    ctx.fillRect(scale*4.2, scale*1.5, scale*0.6, scale*0.4);
-    
-    // Пояс
-    ctx.fillStyle = '#FF0000';
-    ctx.fillRect(scale*2, scale*5, scale*4, scale*0.5);
-    
-    // Ноги
-    ctx.fillStyle = ctx.fillStyle;
-    ctx.fillRect(scale*2.5, scale*7, scale*1, scale*2);
-    ctx.fillRect(scale*4.5, scale*7, scale*1, scale*2);
-    
-    // Руки
-    ctx.fillRect(scale*1, scale*3, scale*1, scale*2);
-    ctx.fillRect(scale*6, scale*3, scale*1, scale*2);
-    
-    ctx.restore();
-  }
-
-  // Рисуем кота
-  function drawCat(x, y, w, h) {
-    const scale = w / 8;
-    ctx.save();
-    ctx.translate(x, y);
-    
-    // Тело
-    ctx.beginPath();
-    ctx.ellipse(scale*4, scale*5, scale*3, scale*2, 0, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Голова
-    ctx.beginPath();
-    ctx.arc(scale*4, scale*2, scale*2, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Уши
-    ctx.beginPath();
-    ctx.moveTo(scale*2.5, scale*1);
-    ctx.lineTo(scale*3, scale*0.5);
-    ctx.lineTo(scale*3.5, scale*1);
-    ctx.fill();
-    
-    ctx.beginPath();
-    ctx.moveTo(scale*4.5, scale*1);
-    ctx.lineTo(scale*5, scale*0.5);
-    ctx.lineTo(scale*5.5, scale*1);
-    ctx.fill();
-    
-    // Глаза
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.arc(scale*3.2, scale*1.8, scale*0.4, 0, Math.PI*2);
-    ctx.arc(scale*4.8, scale*1.8, scale*0.4, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Нос
-    ctx.fillStyle = '#FF69B4';
-    ctx.beginPath();
-    ctx.moveTo(scale*4, scale*2.2);
-    ctx.lineTo(scale*3.8, scale*2.5);
-    ctx.lineTo(scale*4.2, scale*2.5);
-    ctx.closePath();
-    ctx.fill();
-    
-    // Усы
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    ctx.moveTo(scale*4, scale*2.4);
-    ctx.lineTo(scale*3, scale*2.2);
-    ctx.moveTo(scale*4, scale*2.5);
-    ctx.lineTo(scale*3, scale*2.5);
-    ctx.moveTo(scale*4, scale*2.6);
-    ctx.lineTo(scale*3, scale*2.8);
-    
-    ctx.moveTo(scale*4, scale*2.4);
-    ctx.lineTo(scale*5, scale*2.2);
-    ctx.moveTo(scale*4, scale*2.5);
-    ctx.lineTo(scale*5, scale*2.5);
-    ctx.moveTo(scale*4, scale*2.6);
-    ctx.lineTo(scale*5, scale*2.8);
-    ctx.stroke();
-    
-    // Хвост
-    ctx.fillStyle = ctx.fillStyle;
-    ctx.beginPath();
-    ctx.moveTo(scale*7, scale*5);
-    ctx.quadraticCurveTo(scale*6, scale*3, scale*5, scale*6);
-    ctx.quadraticCurveTo(scale*4, scale*7, scale*5, scale*7);
-    ctx.fill();
-    
-    ctx.restore();
-  }
-
-  // Рисуем пса
-  function drawDog(x, y, w, h) {
-    const scale = w / 8;
-    ctx.save();
-    ctx.translate(x, y);
-    
-    // Тело
-    ctx.beginPath();
-    ctx.ellipse(scale*4, scale*5, scale*3, scale*2, 0, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Голова
-    ctx.beginPath();
-    ctx.arc(scale*4, scale*2, scale*2, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Уши
-    ctx.beginPath();
-    ctx.ellipse(scale*3, scale*1.5, scale*1, scale*1.5, 0, 0, Math.PI*2);
-    ctx.ellipse(scale*5, scale*1.5, scale*1, scale*1.5, 0, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Морда
-    ctx.fillStyle = '#8B4513';
-    ctx.beginPath();
-    ctx.ellipse(scale*4, scale*2.5, scale*1.2, scale*1, 0, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Глаза
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.arc(scale*3.2, scale*1.8, scale*0.4, 0, Math.PI*2);
-    ctx.arc(scale*4.8, scale*1.8, scale*0.4, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Нос
-    ctx.beginPath();
-    ctx.arc(scale*4, scale*2.5, scale*0.5, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Хвост
-    ctx.fillStyle = ctx.fillStyle;
-    ctx.beginPath();
-    ctx.moveTo(scale*7, scale*5);
-    ctx.quadraticCurveTo(scale*8, scale*3, scale*6, scale*6);
-    ctx.fill();
-    
-    ctx.restore();
-  }
-
-  // Рисуем пришельца
-  function drawAlien(x, y, w, h) {
-    const scale = w / 8;
-    ctx.save();
-    ctx.translate(x, y);
-    
-    // Тело
-    ctx.beginPath();
-    ctx.arc(scale*4, scale*5, scale*3, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Голова
-    ctx.beginPath();
-    ctx.arc(scale*4, scale*2, scale*2, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Глаза
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.arc(scale*3, scale*1.5, scale*0.8, 0, Math.PI*2);
-    ctx.arc(scale*5, scale*1.5, scale*0.8, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Рот
-    ctx.beginPath();
-    ctx.arc(scale*4, scale*2.5, scale*1, 0, Math.PI, false);
-    ctx.stroke();
-    
-    // Антенны
-    ctx.beginPath();
-    ctx.moveTo(scale*3, scale*0);
-    ctx.lineTo(scale*3.5, scale*1);
-    ctx.moveTo(scale*5, scale*0);
-    ctx.lineTo(scale*4.5, scale*1);
-    ctx.stroke();
-    
-    ctx.restore();
-  }
-
-  // Рисуем дракона
-  function drawDragon(x, y, w, h) {
-    const scale = w / 8;
-    ctx.save();
-    ctx.translate(x, y);
-    
-    // Тело
-    ctx.beginPath();
-    ctx.moveTo(scale*4, scale*2);
-    ctx.quadraticCurveTo(scale*6, scale*4, scale*4, scale*8);
-    ctx.quadraticCurveTo(scale*2, scale*4, scale*4, scale*2);
-    ctx.fill();
-    
-    // Голова
-    ctx.beginPath();
-    ctx.moveTo(scale*4, scale*1);
-    ctx.lineTo(scale*5, scale*2);
-    ctx.lineTo(scale*4, scale*3);
-    ctx.lineTo(scale*3, scale*2);
-    ctx.closePath();
-    ctx.fill();
-    
-    // Глаза
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.arc(scale*3.7, scale*1.8, scale*0.3, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Крылья
-    ctx.fillStyle = ctx.fillStyle;
-    ctx.beginPath();
-    ctx.moveTo(scale*4, scale*4);
-    ctx.lineTo(scale*1, scale*2);
-    ctx.lineTo(scale*2, scale*5);
-    ctx.closePath();
-    ctx.fill();
-    
-    ctx.beginPath();
-    ctx.moveTo(scale*4, scale*4);
-    ctx.lineTo(scale*7, scale*2);
-    ctx.lineTo(scale*6, scale*5);
-    ctx.closePath();
-    ctx.fill();
-    
-    // Лапы
-    ctx.beginPath();
-    ctx.arc(scale*3, scale*7, scale*0.8, 0, Math.PI*2);
-    ctx.arc(scale*5, scale*7, scale*0.8, 0, Math.PI*2);
-    ctx.fill();
-    
-    ctx.restore();
-  }
-
-  // Рисуем единорога
-  function drawUnicorn(x, y, w, h) {
-    const scale = w / 8;
-    ctx.save();
-    ctx.translate(x, y);
-    
-    // Тело
-    ctx.beginPath();
-    ctx.ellipse(scale*4, scale*5, scale*3, scale*2, 0, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Голова
-    ctx.beginPath();
-    ctx.arc(scale*4, scale*2, scale*2, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Грива
-    ctx.fillStyle = '#FFFFFF';
-    for(let i = 0; i < 5; i++) {
+    // Детали для утки
+    function drawDuckDetails() {
+      // Клюв
+      ctx.fillStyle = '#FFA500';
       ctx.beginPath();
-      ctx.arc(scale*(2 + i*0.5), scale*(1 + i*0.2), scale*0.8, 0, Math.PI*2);
+      ctx.moveTo(player.x + player.width*0.8, player.y + player.height/4);
+      ctx.lineTo(player.x + player.width, player.y + player.height/4 - 5);
+      ctx.lineTo(player.x + player.width*0.8, player.y + player.height/4 + 5);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Глаз
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(player.x + player.width*0.7, player.y + player.height/4 - 3, 2, 0, Math.PI*2);
       ctx.fill();
     }
     
-    // Рог
-    ctx.fillStyle = '#FFD700';
-    ctx.beginPath();
-    ctx.moveTo(scale*4, scale*0.5);
-    ctx.lineTo(scale*3.5, scale*1.5);
-    ctx.lineTo(scale*4.5, scale*1.5);
-    ctx.closePath();
-    ctx.fill();
-    
-    // Глаза
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.arc(scale*3.2, scale*1.8, scale*0.4, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Ноздри
-    ctx.beginPath();
-    ctx.arc(scale*4.5, scale*2.2, scale*0.3, 0, Math.PI*2);
-    ctx.arc(scale*3.5, scale*2.2, scale*0.3, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Ноги
-    ctx.fillStyle = ctx.fillStyle;
-    ctx.fillRect(scale*2.5, scale*7, scale*1, scale*2);
-    ctx.fillRect(scale*4.5, scale*7, scale*1, scale*2);
-    
-    // Хвост
-    for(let i = 0; i < 5; i++) {
+    // Детали для робота
+    function drawRobotDetails() {
+      // Глаза
+      ctx.fillStyle = '#FF0000';
       ctx.beginPath();
-      ctx.arc(scale*(5 + i*0.3), scale*(6 + i*0.5), scale*0.8, 0, Math.PI*2);
+      ctx.arc(player.x + player.width*0.4, player.y + player.height/4 - 3, 3, 0, Math.PI*2);
+      ctx.arc(player.x + player.width*0.6, player.y + player.height/4 - 3, 3, 0, Math.PI*2);
+      ctx.fill();
+      
+      // Антенна
+      ctx.strokeStyle = skin.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(player.x + player.width/2, player.y);
+      ctx.lineTo(player.x + player.width/2, player.y - 5);
+      ctx.stroke();
+    }
+    
+    // Детали для космонавта
+    function drawAstronautDetails() {
+      // Шлем
+      ctx.strokeStyle = '#87CEEB';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(player.x + player.width/2, player.y + player.height/4, player.width/4, 0, Math.PI*2);
+      ctx.stroke();
+      
+      // Визор
+      ctx.beginPath();
+      ctx.arc(player.x + player.width/2, player.y + player.height/4, player.width/6, 0, Math.PI);
+      ctx.stroke();
+    }
+    
+    // Детали для ниндзя
+    function drawNinjaDetails() {
+      // Глаза
+      ctx.fillStyle = '#FF0000';
+      ctx.fillRect(player.x + player.width*0.4, player.y + player.height/4 - 3, 3, 1);
+      ctx.fillRect(player.x + player.width*0.6, player.y + player.height/4 - 3, 3, 1);
+      
+      // Пояс
+      ctx.fillStyle = '#FF0000';
+      ctx.fillRect(player.x + player.width*0.3, player.y + player.height*0.6, player.width*0.4, 2);
+    }
+    
+    // Детали для кота
+    function drawCatDetails() {
+      // Уши
+      ctx.beginPath();
+      ctx.moveTo(player.x + player.width*0.4, player.y + player.height/8);
+      ctx.lineTo(player.x + player.width*0.3, player.y);
+      ctx.lineTo(player.x + player.width*0.5, player.y + player.height/8);
+      ctx.fill();
+      
+      // Глаз
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(player.x + player.width*0.4, player.y + player.height/4, 2, 0, Math.PI*2);
+      ctx.arc(player.x + player.width*0.6, player.y + player.height/4, 2, 0, Math.PI*2);
+      ctx.fill();
+      
+      // Усы
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1;
+      for(let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(player.x + player.width*0.5, player.y + player.height/3);
+        ctx.lineTo(player.x + player.width*0.3, player.y + player.height/3 - 3 + i*3);
+        ctx.moveTo(player.x + player.width*0.5, player.y + player.height/3);
+        ctx.lineTo(player.x + player.width*0.7, player.y + player.height/3 - 3 + i*3);
+        ctx.stroke();
+      }
+    }
+    
+    // Детали для пса
+    function drawDogDetails() {
+      // Уши
+      ctx.beginPath();
+      ctx.ellipse(player.x + player.width*0.4, player.y + player.height/8, 5, 8, 0, 0, Math.PI*2);
+      ctx.ellipse(player.x + player.width*0.6, player.y + player.height/8, 5, 8, 0, 0, Math.PI*2);
+      ctx.fill();
+      
+      // Нос
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(player.x + player.width*0.5, player.y + player.height/3, 3, 0, Math.PI*2);
       ctx.fill();
     }
     
-    ctx.restore();
+    // Детали для пришельца
+    function drawAlienDetails() {
+      // Глаза
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(player.x + player.width*0.4, player.y + player.height/4, 4, 0, Math.PI*2);
+      ctx.arc(player.x + player.width*0.6, player.y + player.height/4, 4, 0, Math.PI*2);
+      ctx.fill();
+      
+      // Рот
+      ctx.beginPath();
+      ctx.arc(player.x + player.width*0.5, player.y + player.height/3, 3, 0, Math.PI);
+      ctx.stroke();
+    }
+    
+    // Детали для дракона
+    function drawDragonDetails() {
+      // Глаза
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(player.x + player.width*0.4, player.y + player.height/4, 3, 0, Math.PI*2);
+      ctx.fill();
+      
+      // Гребень
+      ctx.beginPath();
+      ctx.moveTo(player.x + player.width*0.3, player.y);
+      ctx.lineTo(player.x + player.width*0.5, player.y - 5);
+      ctx.lineTo(player.x + player.width*0.7, player.y);
+      ctx.fill();
+    }
+    
+    // Детали для агента
+    function drawAgentDetails() {
+      // Очки
+      ctx.strokeStyle = '#87CEEB';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(player.x + player.width*0.3, player.y + player.height/4 - 5, player.width*0.4, 5);
+      
+      // Галстук
+      ctx.fillStyle = '#FF0000';
+      ctx.beginPath();
+      ctx.moveTo(player.x + player.width*0.5, player.y + player.height/3);
+      ctx.lineTo(player.x + player.width*0.4, player.y + player.height/2);
+      ctx.lineTo(player.x + player.width*0.6, player.y + player.height/2);
+      ctx.closePath();
+      ctx.fill();
+    }
   }
 
-  // Рисуем секретного агента
-  function drawAgent(x, y, w, h) {
-    const scale = w / 8;
-    ctx.save();
-    ctx.translate(x, y);
-    
-    // Тело
-    ctx.fillRect(scale*2, scale*2, scale*4, scale*5);
-    
-    // Голова
-    ctx.fillStyle = '#333';
-    ctx.beginPath();
-    ctx.arc(scale*4, scale*2, scale*1.5, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Очки
-    ctx.fillStyle = '#87CEEB';
-    ctx.fillRect(scale*2.8, scale*1.5, scale*2.4, scale*0.8);
-    ctx.strokeStyle = '#000';
-    ctx.strokeRect(scale*2.8, scale*1.5, scale*2.4, scale*0.8);
-    
-    // Галстук
-    ctx.fillStyle = '#FF0000';
-    ctx.beginPath();
-    ctx.moveTo(scale*4, scale*3);
-    ctx.lineTo(scale*3, scale*5);
-    ctx.lineTo(scale*5, scale*5);
-    ctx.closePath();
-    ctx.fill();
-    
-    // Ноги
-    ctx.fillStyle = ctx.fillStyle;
-    ctx.fillRect(scale*2.5, scale*7, scale*1, scale*2);
-    ctx.fillRect(scale*4.5, scale*7, scale*1, scale*2);
-    
-    // Руки
-    ctx.fillRect(scale*1, scale*3, scale*1, scale*2);
-    ctx.fillRect(scale*6, scale*3, scale*1, scale*2);
-    
-    // Чемодан
-    ctx.fillStyle = '#8B4513';
-    ctx.fillRect(scale*3, scale*7, scale*2, scale*1);
-    
-    ctx.restore();
-  }
-
-  // Управление
+  // Управление как в Doodle Jump
   function setupControls() {
-    // Кнопки управления
-    leftBtn.addEventListener('touchstart', () => leftPressed = true);
-    rightBtn.addEventListener('touchstart', () => rightPressed = true);
-    leftBtn.addEventListener('touchend', () => leftPressed = false);
-    rightBtn.addEventListener('touchend', () => rightPressed = false);
-    leftBtn.addEventListener('mousedown', () => leftPressed = true);
-    rightBtn.addEventListener('mousedown', () => rightPressed = true);
-    leftBtn.addEventListener('mouseup', () => leftPressed = false);
-    rightBtn.addEventListener('mouseup', () => rightPressed = false);
-    leftBtn.addEventListener('mouseleave', () => leftPressed = false);
-    rightBtn.addEventListener('mouseleave', () => rightPressed = false);
-    
-    // Клавиатура
-    window.addEventListener('keydown', (e) => {
-      if(e.key === 'ArrowLeft' || e.key === 'a') leftPressed = true;
-      if(e.key === 'ArrowRight' || e.key === 'd') rightPressed = true;
+    // Сенсорное управление
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      isTouching = true;
+      touchStartX = e.touches[0].clientX;
+      player.lastTouchX = touchStartX;
     });
     
-    window.addEventListener('keyup', (e) => {
-      if(e.key === 'ArrowLeft' || e.key === 'a') leftPressed = false;
-      if(e.key === 'ArrowRight' || e.key === 'd') rightPressed = false;
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if(isTouching) {
+        const touchX = e.touches[0].clientX;
+        player.lastTouchX = touchX;
+      }
+    });
+    
+    canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      isTouching = false;
+    });
+    
+    // Управление мышью
+    canvas.addEventListener('mousedown', (e) => {
+      isTouching = true;
+      touchStartX = e.clientX;
+      player.lastTouchX = touchStartX;
+    });
+    
+    canvas.addEventListener('mousemove', (e) => {
+      if(isTouching) {
+        player.lastTouchX = e.clientX;
+      }
+    });
+    
+    canvas.addEventListener('mouseup', () => {
+      isTouching = false;
+    });
+    
+    canvas.addEventListener('mouseleave', () => {
+      isTouching = false;
     });
   }
 
@@ -1064,10 +763,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const deceleration = 0.15;
     const maxSpeed = 5;
     
-    // Определяем целевое направление
-    if(leftPressed) player.targetSpeedX = -maxSpeed;
-    else if(rightPressed) player.targetSpeedX = maxSpeed;
-    else player.targetSpeedX = 0;
+    // Определяем целевое направление на основе последнего касания
+    if(isTouching) {
+      const canvasRect = canvas.getBoundingClientRect();
+      const canvasCenterX = canvasRect.left + canvas.width/2;
+      const touchOffsetX = player.lastTouchX - canvasCenterX;
+      player.targetSpeedX = (touchOffsetX / (canvas.width/2)) * maxSpeed;
+    } else {
+      player.targetSpeedX = 0;
+    }
     
     // Плавное изменение скорости
     if(player.speedX < player.targetSpeedX) {
@@ -1077,7 +781,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Если не нажаты кнопки - замедление
-    if(!leftPressed && !rightPressed) {
+    if(!isTouching) {
       if(Math.abs(player.speedX) < deceleration) player.speedX = 0;
       else if(player.speedX > 0) player.speedX -= deceleration;
       else if(player.speedX < 0) player.speedX += deceleration;
@@ -1234,6 +938,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="shop-item">
           <div class="skin-preview" style="${bgStyle}">${skin.preview}</div>
           <div class="skin-name">${skin.name}</div>
+          <div>${skin.description}</div>
           ${skin.unlockScore ? `<div>От ${skin.unlockScore} очков</div>` : `<div class="skin-price">${skin.price} SL</div>`}
           <div>
             ${owned ? (selected ? '<b>Выбрано</b>' : `<button data-id="${skin.id}">Выбрать</button>`) 
